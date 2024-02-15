@@ -38,7 +38,7 @@ function Register-RabbitMQServer
     }
     Process
     {
-        $obj += $global:RabbitMQServers | ? ListItemText -eq $ComputerName
+        $obj += $global:RabbitMQServers | Where-Object ListItemText -eq $ComputerName
         if (-not $obj)
         {
             if (-not $Description) { $Description = $ComputerName }

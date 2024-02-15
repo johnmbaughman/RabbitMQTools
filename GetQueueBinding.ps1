@@ -82,6 +82,7 @@ function Get-RabbitMQQueueBinding
     {
         $Credentials = NormaliseCredentials
     }
+
     Process
     {
         if (-not $VirtualHost)
@@ -118,6 +119,7 @@ function Get-RabbitMQQueueBinding
             }
         }
     }
+    
     End
     {
     }

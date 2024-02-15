@@ -121,7 +121,7 @@ function Get-RabbitMQMessage
             {
                 $VirtualHost = $queues.vhost
             } else {
-                $vhosts = $queues | select vhost
+                $vhosts = $queues | Select-Object vhost
                 $s = $vhosts -join ','
                 Write-Error "Queue $Name exists in multiple Virtual Hosts: $($queues.vhost -join ', '). Please specify Virtual Host to use."
             }
@@ -139,6 +139,7 @@ function Get-RabbitMQMessage
                 "count" = $Count
                 "requeue" = -not [bool]$Remove
                 "encoding" = $Encoding
+                "ackmode" = @("ack_requeue_true","ack_requeue_false")[[bool]$Remove]
             }
             if ($Truncate) { $body.Add("truncate", $Truncate) }
 

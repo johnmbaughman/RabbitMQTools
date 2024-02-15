@@ -94,6 +94,7 @@ function Get-RabbitMQChannel
     {
         $Credentials = NormaliseCredentials
     }
+
     Process
     {
         if ($pscmdlet.ShouldProcess("server $ComputerName", "Get node(s): $(NamesToString $Name '(all)')"))
@@ -108,6 +109,7 @@ function Get-RabbitMQChannel
             SendItemsToOutput $result "RabbitMQ.Channel"
         }
     }
+    
     End
     {
     }

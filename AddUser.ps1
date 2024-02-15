@@ -62,7 +62,16 @@ function Add-RabbitMQUser
 
         # Credentials to use when logging to RabbitMQ server.
         [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials
+        [PSCredential]$Credentials,
+
+        # Sets whether to use HTTPS or HTTP
+        [switch]$useHttps,
+
+        # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
+        [int]$port = 15672,
+
+        # Skips the certificate check, useful for localhost and self-signed certificates.
+        [switch]$skipCertificateCheck
     )
 
     Begin
@@ -70,21 +79,23 @@ function Add-RabbitMQUser
         $Credentials = NormaliseCredentials
         $cnt = 0
     }
+
     Process
     {
         if ($pscmdlet.ShouldProcess("server: $ComputerName", "Add user $Name with tag: $Tag"))
         {
-            $url = "http://$([System.Web.HttpUtility]::UrlEncode($ComputerName)):15672/api/users/$([System.Web.HttpUtility]::UrlEncode($Name))"
+            $url = "$(Format-BaseUrl -ComputerName $ComputerName -port $port -useHttps:$useHttps)api/users/$([System.Web.HttpUtility]::UrlEncode($Name))"
             $body = @{
                 'password' = $NewPassword
                 'tags' = $Tag -join ','
             } | ConvertTo-Json
-            $result = Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive -ErrorAction Continue -Method Put -ContentType "application/json" -Body $body
+            Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive -ErrorAction Continue -Method Put -ContentType "application/json" -Body $body -SkipCertificateCheck:$skipCertificateCheck
 
             Write-Verbose "Created user $User with tags $Tag"
             $cnt++
         }
     }
+    
     End
     {
         if ($cnt -gt 1) { Write-Verbose "Created $cnt new users." }

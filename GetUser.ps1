@@ -87,6 +87,7 @@ function Get-RabbitMQUser
     {
         $Credentials = NormaliseCredentials
     }
+
     Process
     {
         if ($pscmdlet.ShouldProcess("server $ComputerName", "Get user(s)"))
@@ -99,6 +100,7 @@ function Get-RabbitMQUser
             else { SendItemsToOutput $result "RabbitMQ.User" | ft -View $View }
         }
     }
+    
     End
     {
     }

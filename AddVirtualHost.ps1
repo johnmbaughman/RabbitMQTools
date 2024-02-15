@@ -79,7 +79,16 @@ function Add-RabbitMQVirtualHost
 
         # Credentials to use when logging to RabbitMQ server.
         [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials
+        [PSCredential]$Credentials,
+
+        # Sets whether to use HTTPS or HTTP
+        [switch]$useHttps,
+
+        # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
+        [int]$port = 15672,
+
+        # Skips the certificate check, useful for localhost and self-signed certificates.
+        [switch]$skipCertificateCheck
     )
 
     Begin
@@ -87,12 +96,13 @@ function Add-RabbitMQVirtualHost
         $Credentials = NormaliseCredentials
         $cnt = 0
     }
+    
     Process
     {
         if (-not $pscmdlet.ShouldProcess("server: $ComputerName", "Add vhost(s): $(NamesToString $Name '(all)')")) {
             foreach ($qn in $Name) 
             { 
-                Write "Creating new Virtual Host $qn on server $ComputerName" 
+                Write-Output "Creating new Virtual Host $qn on server $ComputerName" 
                 $cnt++
             }
 
@@ -101,13 +111,14 @@ function Add-RabbitMQVirtualHost
 
         foreach($n in $Name)
         {
-            $url = "http://$([System.Web.HttpUtility]::UrlEncode($ComputerName)):15672/api/vhosts/$([System.Web.HttpUtility]::UrlEncode($n))"
-            $result = Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive -ErrorAction Continue -Method Put -ContentType "application/json"
+            $url = "$(Format-BaseUrl -ComputerName $ComputerName -port $port -useHttps:$useHttps)api/vhosts/$([System.Web.HttpUtility]::UrlEncode($n))"
+            Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive -ErrorAction Continue -Method Put -ContentType "application/json" -SkipCertificateCheck:$skipCertificateCheck
 
             Write-Verbose "Created Virtual Host $n on server $ComputerName"
             $cnt++
         }
     }
+
     End
     {
         Write-Verbose "Created $cnt Virtual Host(s)."

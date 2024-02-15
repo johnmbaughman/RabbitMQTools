@@ -89,6 +89,7 @@ function Get-RabbitMQConnection
     {
         $Credentials = NormaliseCredentials
     }
+
     Process
     {
         if ($pscmdlet.ShouldProcess("server $ComputerName", "Get connection(s): $(NamesToString $Name '(all)')"))
@@ -102,6 +103,7 @@ function Get-RabbitMQConnection
             SendItemsToOutput $result "RabbitMQ.Connection"
         }
     }
+    
     End
     {
     }

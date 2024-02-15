@@ -111,6 +111,7 @@ function Add-RabbitMQQueue
         $Credentials = NormaliseCredentials
         $cnt = 0
     }
+    
     Process
     {
         if ($pscmdlet.ShouldProcess("server: $ComputerName/$VirtualHost", "Add queue(s): $(NamesToString $Name '(all)'); Durable=$Durable, AutoDelete=$AutoDelete"))
@@ -133,6 +134,7 @@ function Add-RabbitMQQueue
             }
         }
     }
+
     End
     {
         Write-Verbose "Created $cnt Queue(s)."

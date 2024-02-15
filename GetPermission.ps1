@@ -92,6 +92,7 @@ function Get-RabbitMQPermission
     {
         $Credentials = NormaliseCredentials
     }
+
     Process
     {
         if ($pscmdlet.ShouldProcess("server $ComputerName", "Get permission(s) for VirtualHost = $(NamesToString $VirtualHost '(all)') and User = $(NamesToString $User '(all)')"))
@@ -109,6 +110,7 @@ function Get-RabbitMQPermission
             SendItemsToOutput $result "RabbitMQ.Permission"
         }
     }
+    
     End
     {
     }

@@ -89,6 +89,7 @@ function Get-RabbitMQNode
     {
         $Credentials = NormaliseCredentials
     }
+
     Process
     {
         if ($pscmdlet.ShouldProcess("server $ComputerName", "Get node(s): $(NamesToString $Name '(all)')"))
@@ -102,6 +103,7 @@ function Get-RabbitMQNode
             SendItemsToOutput $result "RabbitMQ.Node"
         }
     }
+    
     End
     {
     }

@@ -103,6 +103,7 @@ function Get-RabbitMQExchange
     {
         $Credentials = NormaliseCredentials
     }
+
     Process
     {
         if ($pscmdlet.ShouldProcess("server $ComputerName", "Get exchange(s): $(NamesToString $Name '(all)')"))
@@ -117,6 +118,7 @@ function Get-RabbitMQExchange
             SendItemsToOutput $result "RabbitMQ.Exchange"
         }
     }
+    
     End
     {
     }

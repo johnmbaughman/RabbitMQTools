@@ -83,10 +83,6 @@ function Add-RabbitMQExchange {
         [parameter(ValueFromPipelineByPropertyName = $true)]
         [switch]$Internal,
 
-        # Name/Value pairs of additional queue features
-        [parameter(ValueFromPipelineByPropertyName = $true)]
-        [hashtable]$Arguments,
-
         # Allows to set alternate exchange to which all messages which cannot be routed will be send.
         [parameter(ValueFromPipelineByPropertyName = $true)]
         [Alias("alt")]
@@ -100,8 +96,7 @@ function Add-RabbitMQExchange {
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
         [parameter(ValueFromPipelineByPropertyName = $true)]
         [Alias("HostName", "hn", "cn")]
-        [string]$ComputerName = $defaultComputerName,
-        
+        [string]$ComputerName = $defaultComputerName,        
         
         # UserName to use when logging to RabbitMq server.
         [Parameter(Mandatory = $true, ParameterSetName = 'login')]
@@ -128,6 +123,7 @@ function Add-RabbitMQExchange {
     Begin {
         $Credentials = NormaliseCredentials
     }
+
     Process {
         if ($pscmdlet.ShouldProcess("server: $ComputerName, vhost: $VirtualHost", "Add exchange(s): $(NamesToString $Name '(all)')")) {
             
@@ -136,15 +132,7 @@ function Add-RabbitMQExchange {
             if ($Durable) { $body.Add("durable", $true) }
             if ($AutoDelete) { $body.Add("auto_delete", $true) }
             if ($Internal) { $body.Add("internal", $true) }
-            if ($Arguments) { $body.Add("arguments", $Arguments) }
-            if ($AlternateExchange) { 
-                if ($Arguments -and (-not $body["arguments"].ContainsKey("alternate-exchange"))) {
-                    $body["arguments"] += @{ "alternate-exchange" = $AlternateExchange }
-                }
-                else {
-                    $body.Add("arguments", @{ "alternate-exchange" = $AlternateExchange }) 
-                }
-            }            
+            if ($AlternateExchange) { $body.Add("arguments", @{ "alternate-exchange" = $AlternateExchange }) }
 
             $bodyJson = $body | ConvertTo-Json
 
@@ -159,6 +147,7 @@ function Add-RabbitMQExchange {
             }
         }
     }
+    
     End {
         if ($cnt -gt 1) { Write-Verbose "Created $cnt Exchange(s)." }
     }

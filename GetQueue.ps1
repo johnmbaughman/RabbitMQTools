@@ -111,6 +111,7 @@ function Get-RabbitMQQueue
     {
         $Credentials = NormaliseCredentials
     }
+
     Process
     {
         if ($pscmdlet.ShouldProcess("server $ComputerName", "Get queues(s): $(NamesToString $Name '(all)')"))
@@ -143,6 +144,7 @@ function Get-RabbitMQQueue
             }
         }
     }
+    
     End
     {
     }

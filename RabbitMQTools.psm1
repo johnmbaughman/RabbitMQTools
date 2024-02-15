@@ -12,6 +12,21 @@
 #    Remove-Variable -name 'uriUnEscapesDotsAndSlashes' -Force
 #}
 
+#Set Module Variables
+$InvokeRestMethodKeepAlive = $True
+
+#Capture PSEdition
+$isPowershellCore = $false
+If ($PSVersiontable.PSEdition -eq 'core') {
+    $isPowershellCore = $true
+} 
+
+# Uri parser variables
+if (-not $isPowershellCore) {
+    if (-not $UnEscapeDotsAndSlashes) { Set-Variable -Scope Script -name UnEscapeDotsAndSlashes -value 0x2000000 }
+    if (-not $defaultUriParserFlagsValue) { Set-Variable -Scope Script -name defaultUriParserFlagsValue -value (GetUriParserFlags) }
+    if (-not $uriUnEscapesDotsAndSlashes) { Set-Variable -Scope Script -name uriUnEscapesDotsAndSlashes -value (($defaultUriParserFlagsValue -band $UnEscapeDotsAndSlashes) -eq $UnEscapeDotsAndSlashes) }
+}
 
 Register-RabbitMQServer 'localhost' -WarningAction SilentlyContinue
 
@@ -24,6 +39,7 @@ New-Alias -Name rrvh -value Remove-RabbitMQVirtualHost -Description "Removes Rab
 New-Alias -Name delvhost -value Remove-RabbitMQVirtualHost -Description "Removes RabbitMQ's Virutal Hosts"
 
 New-Alias -Name gre -value Get-RabbitMQExchange -Description "Gets RabbitMQ's Exchages"
+New-Alias -Name addexchangebinding -value Add-RabbitMQExchangeBinding -Description "Adds bindings between RabbitMQ exchanges"
 
 New-Alias -Name grq -value Get-RabbitMQQueue -Description "Gets RabbitMQ's Queues"
 New-Alias -Name getqueue -value Get-RabbitMQQueue -Description "Gets RabbitMQ's Queues"
@@ -32,7 +48,7 @@ New-Alias -Name addqueue -value Add-RabbitMQQueue -Description "Adds RabbitMQ's 
 New-Alias -Name rrq -value Remove-RabbitMQQueue -Description "Removes RabbitMQ's Queues"
 New-Alias -Name delqueue -value Remove-RabbitMQQueue -Description "Removes RabbitMQ's Queues"
 New-Alias -Name getqueuebinding -value Get-RabbitMQQueueBinding -Description "Gets bindings for RabbitMQ Queues"
-New-Alias -Name addqueuebinding -value Add-RabbitMQQueueBinding -Description "Adds bindings betwen RabbitMQ exchange and queue"
+New-Alias -Name addqueuebinding -value Add-RabbitMQQueueBinding -Description "Adds bindings between RabbitMQ exchange and queue"
 
 New-Alias -Name getmessage -value Get-RabbitMQMessage -Description "Gets messages from RabbitMQ queue"
 

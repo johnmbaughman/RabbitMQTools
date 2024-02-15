@@ -87,6 +87,7 @@ function Add-RabbitMQQueueBinding
         $Credentials = NormaliseCredentials
         $cnt = 0
     }
+
     Process
     {
         if ($pscmdlet.ShouldProcess("$ComputerName/$VirtualHost", "Add queue binding from exchange $ExchangeName to queue $Name with routing key $RoutingKey"))
@@ -97,7 +98,6 @@ function Add-RabbitMQQueueBinding
                 Write-Verbose "Invoking REST API: $url"
 
                 $body = @{"routing_key" = $RoutingKey}
-                if ($Arguments) { $body.Add("arguments", $Arguments) }
 
                 $bodyJson = $body | ConvertTo-Json
                 Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive -ErrorAction Continue -Method Post -ContentType "application/json" -Body $bodyJson -SkipCertificateCheck:$skipCertificateCheck
@@ -107,6 +107,7 @@ function Add-RabbitMQQueueBinding
             }
         }
     }
+    
     End
     {
         Write-Verbose "Created $cnt Binding(s)."

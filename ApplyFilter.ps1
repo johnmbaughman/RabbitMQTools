@@ -17,5 +17,5 @@
     foreach($n in $name) { $filter += '$_.' + $prop + '-like "' + $n + '"' }
 
     $sb = [scriptblock]::create($filter -join ' -or ')
-    return $items | ? $sb
+    return $items | Where-Object $sb
 }

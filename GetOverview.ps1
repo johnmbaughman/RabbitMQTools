@@ -70,6 +70,7 @@ function Get-RabbitMQOverview
     {
         $Credentials = NormaliseCredentials
     }
+
     Process
     {
         if (-not $pscmdlet.ShouldProcess("server $ComputerName", "Get overview: $(NamesToString $Name '(all)')"))
@@ -90,6 +91,7 @@ function Get-RabbitMQOverview
             Write-Output $overview
         }
     }
+    
     End
     {
     }

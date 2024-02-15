@@ -98,6 +98,7 @@ function Get-RabbitMQVirtualHost
     {
         $Credentials = NormaliseCredentials
     }
+    
     Process
     {
         if ($pscmdlet.ShouldProcess("server $ComputerName", "Get vhost(s): $(NamesToString $Name '(all)')"))
@@ -113,6 +114,7 @@ function Get-RabbitMQVirtualHost
             SendItemsToOutput $result "RabbitMQ.VirtualHost"
         }
     }
+
     End
     {
     }

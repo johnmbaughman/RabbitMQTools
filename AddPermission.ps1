@@ -81,11 +81,12 @@ function Add-RabbitMQPermission
         
         $cnt = 0
     }
+
     Process
     {
         if ($pscmdlet.ShouldProcess("server: $ComputerName", "Create permission to virtual host $VirtualHost for user $User : $Configure, $Read $Write"))
         {
-            $url = "http://$([System.Web.HttpUtility]::UrlEncode($ComputerName)):15672/api/permissions/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($User))"
+            $url = "$(Format-BaseUrl -ComputerName $ComputerName -port $port -useHttps:$useHttps)api/permissions/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($User))"
             $body = @{
                 'configure' = $Configure
                 'read' = $Read
@@ -97,6 +98,7 @@ function Add-RabbitMQPermission
             $cnt++
         }
     }
+    
     End
     {
         if ($cnt -gt 1) { Write-Verbose "Created $cnt permissions." }

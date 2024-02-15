@@ -83,7 +83,16 @@ function Move-RabbitMQMessage
 
         # Credentials to use when logging to RabbitMQ server.
         [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials
+        [PSCredential]$Credentials,
+
+        # Sets whether to use HTTPS or HTTP
+        [switch]$useHttps,
+
+        # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
+        [int]$port = 15672,
+
+        # Skips the certificate check, useful for localhost and self-signed certificates.
+        [switch]$skipCertificateCheck
     )
 
     Begin
@@ -91,14 +100,14 @@ function Move-RabbitMQMessage
         $Credentials = NormaliseCredentials
         $cnt = 0
         
-        $exchange = Get-RabbitMQQueueBinding -VirtualHost $VirtualHost -Name $DestinationQueueName -Credentials $Credentials | ? source -ne "" | select -First 1
+        $exchange = Get-RabbitMQQueueBinding -VirtualHost $VirtualHost -Name $DestinationQueueName -Credentials $Credentials -port $port -useHttps:$useHttps -SkipCertificateCheck:$skipCertificateCheck | Where-Object source -ne "" | Select-Object -First 1
     }
     Process
     {
         $s = @{$true=$Count;$false='all'}[$Count -gt 0]
         if ($pscmdlet.ShouldProcess("server: $ComputerName/$VirtualHost", "Move $s messages from queue $SourceQueueName to queue $DestinationQueueName."))
         {
-            $m = Get-RabbitMQMessage -Credentials $Credentials -VirtualHost $VirtualHost -Name $SourceQueueName
+            $m = Get-RabbitMQMessage -Credentials $Credentials -VirtualHost $VirtualHost -Name $SourceQueueName -port $port -useHttps:$useHttps -SkipCertificateCheck:$skipCertificateCheck
             $c = $m.message_count + 1
 
             if ($Count -eq 0 -or $Count -gt $c ) { $Count = $c }
@@ -107,13 +116,13 @@ function Move-RabbitMQMessage
             for ($i = 1; $i -le $Count; $i++)
             {
                 # get message to be copies, but do not remove it from the server yet.
-                $m = Get-RabbitMQMessage -Credentials $Credentials -VirtualHost $VirtualHost -Name $SourceQueueName
+                $m = Get-RabbitMQMessage -Credentials $Credentials -VirtualHost $VirtualHost -Name $SourceQueueName -port $port -useHttps:$useHttps -SkipCertificateCheck:$skipCertificateCheck
 
                 # publish message to copying exchange, this will publish it onto dest queue as well as src queue.
-                Add-RabbitMQMessage -Credentials $Credentials -VirtualHost $VirtualHost -ExchangeName $exchange.source -RoutingKey $exchange.routing_key -Payload $m.payload -Properties $m.properties
+                Add-RabbitMQMessage -Credentials $Credentials -VirtualHost $VirtualHost -ExchangeName $exchange.source -RoutingKey $exchange.routing_key -Payload $m.payload -Properties $m.properties -port $port -useHttps:$useHttps -SkipCertificateCheck:$skipCertificateCheck
 
                 # remove message from src queue. It has been published step earlier.
-                $m = Get-RabbitMQMessage -Credentials $Credentials -VirtualHost $VirtualHost -Name $SourceQueueName -Remove
+                $m = Get-RabbitMQMessage -Credentials $Credentials -VirtualHost $VirtualHost -Name $SourceQueueName -Remove -port $port -useHttps:$useHttps -SkipCertificateCheck:$skipCertificateCheck
 
                 Write-Verbose "published message $i out of $Count"
                 $cnt++
