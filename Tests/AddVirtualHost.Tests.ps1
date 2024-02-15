@@ -1,20 +1,20 @@
 ﻿$here = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$here\TestSetup.ps1"
-. "$here\..\AddVirtualHost.ps1"
+. "$here\..\Public\Add-RabbitMQVirtualHost.ps1"
 
 function TearDownTest() {
     
-    $vhosts = Get-RabbitMQVirtualHost -ComputerName $server vh3, vh4
+    $vhosts = Get-RabbitMQVirtualHost -HostName $server -Name vh3, vh4
 
-    ($vhosts) | Remove-RabbitMQVirtualHost -ComputerName $server -ErrorAction Continue -Confirm:$false
+    ($vhosts) | Remove-RabbitMQVirtualHost -HostName $server -ErrorAction Continue -Confirm:$false
 }
 
 Describe -Tags "Example" "Add-RabbitMQVirtualHost" {
     It "should create new Virtual Host" {
     
-        Add-RabbitMQVirtualHost -ComputerName $server "vh3"
+        Add-RabbitMQVirtualHost -HostName $server -Name "vh3"
         
-        $actual = Get-RabbitMQVirtualHost -ComputerName $server "vh3" | select -ExpandProperty name 
+        $actual = Get-RabbitMQVirtualHost -HostName $server -Name "vh3" | select -ExpandProperty name 
         
         $actual | Should Be "vh3"
     
@@ -23,10 +23,10 @@ Describe -Tags "Example" "Add-RabbitMQVirtualHost" {
     
     It "should do nothing when VirtualHost already exists" {
     
-        Add-RabbitMQVirtualHost -ComputerName $server "vh3"
-        Add-RabbitMQVirtualHost -ComputerName $server "vh3"
+        Add-RabbitMQVirtualHost -HostName $server "vh3"
+        Add-RabbitMQVirtualHost -HostName $server "vh3"
     
-        $actual = Get-RabbitMQVirtualHost -ComputerName $server "vh3" | select -ExpandProperty name 
+        $actual = Get-RabbitMQVirtualHost -HostName $server "vh3" | select -ExpandProperty name 
         
         $actual | Should Be "vh3"
     
@@ -35,9 +35,9 @@ Describe -Tags "Example" "Add-RabbitMQVirtualHost" {
     
     It "should create many Virtual Hosts" {
     
-        Add-RabbitMQVirtualHost -ComputerName $server "vh3", "vh4"
+        Add-RabbitMQVirtualHost -HostName $server "vh3", "vh4"
     
-        $actual = Get-RabbitMQVirtualHost -ComputerName $server "vh3", "vh4" | select -ExpandProperty name 
+        $actual = Get-RabbitMQVirtualHost -HostName $server "vh3", "vh4" | select -ExpandProperty name 
     
         $expected = $("vh3", "vh4")
     
@@ -48,9 +48,9 @@ Describe -Tags "Example" "Add-RabbitMQVirtualHost" {
     
     It "should get VirtualHost to be created from the pipe" {
     
-        $("vh3", "vh4") | Add-RabbitMQVirtualHost -ComputerName $server
+        $("vh3", "vh4") | Add-RabbitMQVirtualHost -HostName $server
         
-        $actual = $($("vh3", "vh4") | Get-RabbitMQVirtualHost -ComputerName $server) | select -ExpandProperty name 
+        $actual = $($("vh3", "vh4") | Get-RabbitMQVirtualHost -HostName $server) | select -ExpandProperty name 
     
         $expected = $("vh3", "vh4")
     
@@ -62,13 +62,13 @@ Describe -Tags "Example" "Add-RabbitMQVirtualHost" {
     It "should get VirtualHost with ComputerName to be created from the pipe" {
     
         $pipe = $(
-            New-Object -TypeName psobject -Prop @{"ComputerName" = $server; "Name" = "vh3" }
-            New-Object -TypeName psobject -Prop @{"ComputerName" = $server; "Name" = "vh4" }
+            New-Object -TypeName psobject -Prop @{"HostName" = $server; "Name" = "vh3" }
+            New-Object -TypeName psobject -Prop @{"HostName" = $server; "Name" = "vh4" }
         )
     
         $pipe | Add-RabbitMQVirtualHost
     
-        $actual = $($pipe | Get-RabbitMQVirtualHost -ComputerName $server) | select -ExpandProperty name 
+        $actual = $($pipe | Get-RabbitMQVirtualHost -HostName $server) | select -ExpandProperty name 
     
         $expected = $("vh3", "vh4")
     
