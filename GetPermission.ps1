@@ -76,7 +76,16 @@ function Get-RabbitMQPermission
 
         # Credentials to use when logging to RabbitMQ server.
         [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials
+        [PSCredential]$Credentials,
+
+        # Sets whether to use HTTPS or HTTP
+        [switch]$useHttps,
+
+        # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
+        [int]$port = 15672,
+
+        # Skips the certificate check, useful for localhost and self-signed certificates.
+        [switch]$skipCertificateCheck
     )
 
     Begin
@@ -87,7 +96,7 @@ function Get-RabbitMQPermission
     {
         if ($pscmdlet.ShouldProcess("server $ComputerName", "Get permission(s) for VirtualHost = $(NamesToString $VirtualHost '(all)') and User = $(NamesToString $User '(all)')"))
         {
-            $result = GetItemsFromRabbitMQApi -ComputerName $ComputerName $Credentials "permissions"
+            $result = GetItemsFromRabbitMQApi -ComputerName $ComputerName $Credentials "permissions" -useHttps:$useHttps -port:$port -SkipCertificateCheck:$skipCertificateCheck
             $result = ApplyFilter $result "vhost" $VirtualHost
             $result = ApplyFilter $result "user" $User
 

@@ -55,8 +55,7 @@ function Get-RabbitMQQueueBinding
         [parameter(ValueFromPipelineByPropertyName=$true, Position=2)]
         [Alias("HostName", "hn", "cn")]
         [string]$ComputerName = $defaultComputerName,
-        
-        
+                
         # UserName to use when logging to RabbitMq server.
         [Parameter(Mandatory=$true, ParameterSetName='login')]
         [string]$UserName,
@@ -67,7 +66,16 @@ function Get-RabbitMQQueueBinding
 
         # Credentials to use when logging to RabbitMQ server.
         [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials
+        [PSCredential]$Credentials,
+
+        # Sets whether to use HTTPS or HTTP
+        [switch]$useHttps,
+
+        # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
+        [int]$port = 15672,
+
+        # Skips the certificate check, useful for localhost and self-signed certificates.
+        [switch]$skipCertificateCheck
     )
 
     Begin
@@ -83,7 +91,7 @@ function Get-RabbitMQQueueBinding
             $p.Add("Credentials", $Credentials)
             if ($ComputerName) { $p.Add("ComputerName", $ComputerName) }
             
-            $queues = Get-RabbitMQQueue @p | ? Name -eq $Name
+            $queues = Get-RabbitMQQueue @p | Where-Object Name -eq $Name
 
             if (-not $queues) { return; }
 
@@ -91,17 +99,18 @@ function Get-RabbitMQQueueBinding
             {
                 $VirtualHost = $queues.vhost
             } else {
-                $vhosts = $queues | select vhost
-                $s = $vhosts -join ','
+                #$vhosts = $queues | Select-Object vhost
+                #$s = $vhosts -join ','
                 Write-Error "Queue $Name exists in multiple Virtual Hosts: $($queues.vhost -join ', '). Please specify Virtual Host to use."
             }
         }
 
+        # TODO: Revisit to get Exchange bindings
         if ($pscmdlet.ShouldProcess("server $ComputerName", "Get bindings for queue(s): $(NamesToString $Name '(all)')"))
         {
             foreach ($n in $Name)
             {
-                $result = GetItemsFromRabbitMQApi -ComputerName $ComputerName $Credentials "queues/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($n))/bindings"
+                $result = GetItemsFromRabbitMQApi -ComputerName $ComputerName $Credentials "queues/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($n))/bindings" -useHttps:$useHttps -port:$port -SkipCertificateCheck:$skipCertificateCheck
 
                 $result | Add-Member -NotePropertyName "ComputerName" -NotePropertyValue $ComputerName
 

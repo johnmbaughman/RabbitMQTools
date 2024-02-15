@@ -74,6 +74,10 @@ function Add-RabbitMQQueue
         [parameter(ValueFromPipelineByPropertyName=$true)]
         [switch]$AutoDelete = $false,
 
+        # Name/Value pairs of additional queue features
+        [parameter(ValueFromPipelineByPropertyName=$true)]
+        [hashtable]$Arguments,
+
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
         [parameter(ValueFromPipelineByPropertyName=$true)]
         [Alias("HostName", "hn", "cn")]
@@ -90,7 +94,16 @@ function Add-RabbitMQQueue
 
         # Credentials to use when logging to RabbitMQ server.
         [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials
+        [PSCredential]$Credentials,
+
+        # Sets whether to use HTTPS or HTTP
+        [switch]$useHttps,
+
+        # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
+        [int]$port = 15672,
+
+        # Skips the certificate check, useful for localhost and self-signed certificates.
+        [switch]$skipCertificateCheck
     )
 
     Begin
@@ -104,15 +117,16 @@ function Add-RabbitMQQueue
         {
             foreach($n in $Name)
             {
-                $url = "http://$([System.Web.HttpUtility]::UrlEncode($ComputerName)):15672/api/queues/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($n))"
+                $url = "$(Format-BaseUrl -ComputerName $ComputerName -port $port -useHttps:$useHttps)queues/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($n))"
                 Write-Verbose "Invoking REST API: $url"
 
                 $body = @{}
                 if ($Durable) { $body.Add("durable", $true) }
                 if ($AutoDelete) { $body.Add("auto_delete", $true) }
+                if ($Arguments) { $body.Add("arguments", $Arguments) }
 
                 $bodyJson = $body | ConvertTo-Json
-                $result = Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive -ErrorAction Continue -Method Put -ContentType "application/json" -Body $bodyJson
+                Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive -ErrorAction Continue -Method Put -ContentType "application/json" -Body $bodyJson -SkipCertificateCheck:$skipCertificateCheck
 
                 Write-Verbose "Created Queue $n on $ComputerName/$VirtualHost"
                 $cnt++

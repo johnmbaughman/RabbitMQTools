@@ -77,7 +77,10 @@
         ${PassThru},
 
         [switch]
-        ${AllowEscapedDotsAndSlashes})
+        ${AllowEscapedDotsAndSlashes},
+        
+        [switch]
+        ${SkipCertificateCheck})
 
     begin
     {

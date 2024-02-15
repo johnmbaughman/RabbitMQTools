@@ -51,11 +51,14 @@ function Add-RabbitMQQueueBinding
         [Alias("rk")]
         [string]$RoutingKey,
 
+        # Name/Value pairs of additional queue features
+        [parameter(ValueFromPipelineByPropertyName=$true)]
+        [hashtable]$Arguments,
+
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
         [parameter(ValueFromPipelineByPropertyName=$true, Position=4)]
         [Alias("HostName", "hn", "cn")]
-        [string]$ComputerName = $defaultComputerName,
-        
+        [string]$ComputerName = $defaultComputerName,        
         
         # UserName to use when logging to RabbitMq server.
         [Parameter(Mandatory=$true, ParameterSetName='login')]
@@ -67,7 +70,16 @@ function Add-RabbitMQQueueBinding
 
         # Credentials to use when logging to RabbitMQ server.
         [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials
+        [PSCredential]$Credentials,
+
+        # Sets whether to use HTTPS or HTTP
+        [switch]$useHttps,
+
+        # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
+        [int]$port = 15672,
+
+        # Skips the certificate check, useful for localhost and self-signed certificates.
+        [switch]$skipCertificateCheck
     )
 
     Begin
@@ -81,15 +93,14 @@ function Add-RabbitMQQueueBinding
         {
             foreach($n in $Name)
             {
-                $url = "http://$([System.Web.HttpUtility]::UrlEncode($ComputerName)):15672/api/bindings/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/e/$([System.Web.HttpUtility]::UrlEncode($ExchangeName))/q/$([System.Web.HttpUtility]::UrlEncode($Name))"
+                $url = "$(Format-BaseUrl -ComputerName $ComputerName -port $port -useHttps:$useHttps)bindings/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/e/$([System.Web.HttpUtility]::UrlEncode($ExchangeName))/q/$([System.Web.HttpUtility]::UrlEncode($Name))"
                 Write-Verbose "Invoking REST API: $url"
 
-                $body = @{
-                    "routing_key" = $RoutingKey
-                }
+                $body = @{"routing_key" = $RoutingKey}
+                if ($Arguments) { $body.Add("arguments", $Arguments) }
 
                 $bodyJson = $body | ConvertTo-Json
-                $result = Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive -ErrorAction Continue -Method Post -ContentType "application/json" -Body $bodyJson
+                Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive -ErrorAction Continue -Method Post -ContentType "application/json" -Body $bodyJson -SkipCertificateCheck:$skipCertificateCheck
 
                 Write-Verbose "Bound exchange $ExchangeName to queue $Name $n on $ComputerName/$VirtualHost"
                 $cnt++

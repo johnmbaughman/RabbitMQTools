@@ -4,7 +4,13 @@ function GetUriParserFlags
 {
 
     $getSyntax = [System.UriParser].GetMethod("GetSyntax", 40)
-    $flags = [System.UriParser].GetField("m_Flags", 36)
+    $fieldName = "m_Flags"
+    # Handle PowerShell Core and .Net Core
+    if (([System.Environment]::Version).Major -gt 4)
+    {
+        $fieldName = "_flags"
+    }
+    $flags = [System.UriParser].GetField($fieldName, 36)
 
     $parser = $getSyntax.Invoke($null, "http")
     return $flags.GetValue($parser)
@@ -13,7 +19,13 @@ function GetUriParserFlags
 function SetUriParserFlags([int]$newValue)
 {
     $getSyntax = [System.UriParser].GetMethod("GetSyntax", 40)
-    $flags = [System.UriParser].GetField("m_Flags", 36)
+    $fieldName = "m_Flags"
+    # Handle PowerShell Core and .Net Core
+    if (([System.Environment]::Version).Major -gt 4)
+    {
+        $fieldName = "_flags"
+    }
+    $flags = [System.UriParser].GetField($fieldName, 36)
     
     $parser = $getSyntax.Invoke($null, "http")
     $flags.SetValue($parser, $newValue)

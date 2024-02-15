@@ -9,12 +9,12 @@
         [parameter(Mandatory=$true, ParameterSetName='login', Position = 1)]
         [string]$userName,
 
+        # TODO: Convert to secure string
         [parameter(Mandatory=$true, ParameterSetName='login', Position = 2)]
         [string]$password,
 
         [parameter(Mandatory=$true, ParameterSetName='login', Position = 3)]
         [string]$fn,
-
 
         [parameter(Mandatory=$true, ParameterSetName='cred', Position = 0)]
         [string]$computerName,
@@ -23,7 +23,13 @@
         [PSCredential]$cred,
         
         [parameter(Mandatory=$true, ParameterSetName='cred', Position = 2)]
-        [string]$function
+        [string]$function,
+
+        [switch]$useHttps,
+
+        [int]$port = 15672,
+
+        [switch]$skipCertificateCheck
     )
 
     Add-Type -AssemblyName System.Web
@@ -32,12 +38,12 @@
     if ($PsCmdlet.ParameterSetName -eq "login") 
     { 
         $computerName = $cn
-        $cred = GetRabbitMqCredentials $userName $password 
+        $cred = GetRabbitMqCredentials -userName $userName -password $password 
         $function = $fn
     }
-                
-    $url = "http://$([System.Web.HttpUtility]::UrlEncode($computerName)):15672/api/$function"
+        
+    $url = "$(Format-BaseUrl -ComputerName $ComputerName -port $port -useHttps:$useHttps)$($function)"
     Write-Verbose "Invoking REST API: $url"
     
-    return Invoke-RestMethod $url -Credential $cred -DisableKeepAlive -AllowEscapedDotsAndSlashes
+    return Invoke-RestMethod $url -Credential $cred -DisableKeepAlive -SkipCertificateCheck:$skipCertificateCheck
 }

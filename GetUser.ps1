@@ -71,7 +71,16 @@ function Get-RabbitMQUser
         [string]$Password,
 
         [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials
+        [PSCredential]$Credentials,
+
+        # Sets whether to use HTTPS or HTTP
+        [switch]$useHttps,
+
+        # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
+        [int]$port = 15672,
+
+        # Skips the certificate check, useful for localhost and self-signed certificates.
+        [switch]$skipCertificateCheck
     )
 
     Begin
@@ -82,7 +91,7 @@ function Get-RabbitMQUser
     {
         if ($pscmdlet.ShouldProcess("server $ComputerName", "Get user(s)"))
         {
-            $result = GetItemsFromRabbitMQApi -ComputerName $ComputerName $Credentials "users"
+            $result = GetItemsFromRabbitMQApi -ComputerName $ComputerName $Credentials "users" -useHttps:$useHttps -port:$port -SkipCertificateCheck:$skipCertificateCheck
             $result = ApplyFilter $result 'name' $Name
             $result | Add-Member -NotePropertyName "ComputerName" -NotePropertyValue $ComputerName
  

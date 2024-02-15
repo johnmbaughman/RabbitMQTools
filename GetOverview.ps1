@@ -54,7 +54,16 @@ function Get-RabbitMQOverview
 
         # Credentials to use when logging to RabbitMQ server.
         [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials
+        [PSCredential]$Credentials,
+
+        # Sets whether to use HTTPS or HTTP
+        [switch]$useHttps,
+
+        # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
+        [int]$port = 15672,
+
+        # Skips the certificate check, useful for localhost and self-signed certificates.
+        [switch]$skipCertificateCheck
     )
 
     Begin
@@ -74,7 +83,7 @@ function Get-RabbitMQOverview
 
         foreach ($cn in $Name)
         {
-            $overview = GetItemsFromRabbitMQApi -ComputerName $cn $Credentials "overview"
+            $overview = GetItemsFromRabbitMQApi -ComputerName $cn $Credentials "overview" -useHttps:$useHttps -port:$port -SkipCertificateCheck:$skipCertificateCheck
             $overview | Add-Member -NotePropertyName "ComputerName" -NotePropertyValue $cn
             $overview.PSObject.TypeNames.Insert(0, "RabbitMQ.ServerOverview")
 

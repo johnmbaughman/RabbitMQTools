@@ -87,7 +87,16 @@ function Get-RabbitMQMessage
 
         # Credentials to use when logging to RabbitMQ server.
         [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials
+        [PSCredential]$Credentials,
+
+        # Sets whether to use HTTPS or HTTP
+        [switch]$useHttps,
+
+        # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
+        [int]$port = 15672,
+
+        # Skips the certificate check, useful for localhost and self-signed certificates.
+        [switch]$skipCertificateCheck
     )
 
     Begin
@@ -104,7 +113,7 @@ function Get-RabbitMQMessage
             $p.Add("Credentials", $Credentials)
             if ($ComputerName) { $p.Add("ComputerName", $ComputerName) }
             
-            $queues = Get-RabbitMQQueue @p | ? Name -eq $Name
+            $queues = Get-RabbitMQQueue @p | Where-Object Name -eq $Name
 
             if (-not $queues) { return; }
 
@@ -123,7 +132,7 @@ function Get-RabbitMQMessage
         if ([bool]$Remove) { $s = "Messages will be removed from the queue." } else {$s = "Messages will be requeued."}
         if ($pscmdlet.ShouldProcess("server: $ComputerName/$VirtualHost", "Get $Count message(s) from queue $Name. $s"))
         {
-            $url = "http://$([System.Web.HttpUtility]::UrlEncode($ComputerName)):15672/api/queues/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($Name))/get"
+            $url = "$(Format-BaseUrl -ComputerName $ComputerName -port $port -useHttps:$useHttps)queues/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($Name))/get"
             Write-Verbose "Invoking REST API: $url"
 
             $body = @{
@@ -137,7 +146,7 @@ function Get-RabbitMQMessage
 
             Write-Debug "body: $bodyJson"
 
-            $result = Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive -ErrorAction Continue -Method Post -ContentType "application/json" -Body $bodyJson
+            $result = Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive -ErrorAction Continue -Method Post -ContentType "application/json" -Body $bodyJson -SkipCertificateCheck:$skipCertificateCheck
 
             $result | Add-Member -NotePropertyName "QueueName" -NotePropertyValue $Name
 
@@ -155,12 +164,12 @@ function Get-RabbitMQMessage
                 {
                     'payload'
                     {
-                        SendItemsToOutput $result "RabbitMQ.QueueMessage" | fc
+                        SendItemsToOutput $result "RabbitMQ.QueueMessage" | Format-Custom
                     }
 
                     'details'
                     {
-                        SendItemsToOutput $result "RabbitMQ.QueueMessage" | ft -View Details
+                        SendItemsToOutput $result "RabbitMQ.QueueMessage" | Format-Table -View Details
                     }
                     
                     Default { SendItemsToOutput $result "RabbitMQ.QueueMessage" }
