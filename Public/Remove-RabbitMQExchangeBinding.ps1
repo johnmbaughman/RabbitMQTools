@@ -35,71 +35,67 @@
 .LINK
     https://www.rabbitmq.com/management.html - information about RabbitMQ management plugin.
 #>
-function Remove-RabbitMQExchangeBinding
-{
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact="High")]
+function Remove-RabbitMQExchangeBinding {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = "High")]
     Param
     (
-        # Name of RabbitMQ Virtual Host.
-        [parameter(Mandatory = $false, ValueFromPipelineByPropertyName=$true, Position = 0)]
-        [Alias("vh", "vhost")]
-        [string]$VirtualHost = $defaultVirtualhost,
+        # Name of the virtual host.
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [Alias("vhost")]
+        [string]$VirtualHost = $DefaultVirtualHost,
 
-        # Name of RabbitMQ Source Exchange.
-        [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=1)]
-        [Alias("exchange")]
-        [string]$ExchangeName,
+        # Name of RabbitMQ Exchange.
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Alias("SourceExchange")]
+        [string]$Source,
 
-        # Name of RabbitMQ Destination Exchange.
-        [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=2)]
-        [Alias("name", "Name")]
-        [string]$Name,
+        # Name of RabbitMQ Exchange.
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Alias("TargetExchange")]
+        [string]$Destination,
 
         # Routing key.
-        [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=3)]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [Alias("rk")]
         [string]$RoutingKey,
 
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true, Position=4)]
-        [Alias("HostName", "hn", "cn")]
-        [string]$HostName = $defaultComputerName,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("ComputerName")]
+        [string]$HostName = $DefaultHostName,
 
         # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$false)]
-        [PSCredential]$Credentials = $defaultCredentials,
+        [Parameter(Mandatory = $false)]
+        [PSCredential]$Credentials = $DefaultCredentials,
 
         # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+        [switch]$UseHttps,
 
         # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+        [int]$Port = 15672,
 
         # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
+        [switch]$SkipCertificateCheck
     )
 
-    Begin
-    {
+    begin {
         $cnt = 0
     }
 
-    Process
-    {
-        if ($pscmdlet.ShouldProcess("$HostName/$VirtualHost", "Remove binding between source exchange $ExchangeName and destination exchange $Name"))
-        {
-            $url = "$(Format-BaseUrl -HostName $HostName -port $port -useHttps:$useHttps)api/bindings/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/e/$([System.Web.HttpUtility]::UrlEncode($ExchangeName))/e/$([System.Web.HttpUtility]::UrlEncode($Name))/$([System.Web.HttpUtility]::UrlEncode($RoutingKey))"
+    process {
+        if ($PSCmdlet.ShouldProcess("$HostName/$VirtualHost", "Remove binding between source exchange $ExchangeName and destination exchange $Name")) {
+            $url = "$(Format-BaseUrl -HostName $HostName -port $Port -UseHttps:$UseHttps)bindings/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/e/$([System.Web.HttpUtility]::UrlEncode($Source))/e/$([System.Web.HttpUtility]::UrlEncode($Destination))/$([System.Web.HttpUtility]::UrlEncode($RoutingKey))"
             Write-Verbose "Invoking REST API: $url"
         
-            Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Delete -SkipCertificateCheck:$skipCertificateCheck
+
+            Invoke-RestMethod -Uri $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Delete -SkipCertificateCheck:$SkipCertificateCheck
 
             Write-Verbose "Removed binding between source exchange $ExchangeName and destination exchange $Name $n on $HostName/$VirtualHost"
             $cnt++
         }
     }
 
-    End
-    {
+    end {
         if ($cnt -gt 1) { Write-Verbose "Unbound $cnt Exchanges." }
     }
 }

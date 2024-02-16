@@ -35,79 +35,74 @@
 .LINK
     https://www.rabbitmq.com/management.html - information about RabbitMQ management plugin.
 #>
-function Remove-RabbitMQQueueBinding
-{
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact="High")]
+function Remove-RabbitMQQueueBinding {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = "High")]
     Param
     (
         # Name of RabbitMQ Virtual Host.
-        [parameter(Mandatory = $false, ValueFromPipelineByPropertyName=$true, Position = 0)]
-        [Alias("vh", "vhost")]
-        [string]$VirtualHost = $defaultVirtualhost,
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [Alias("vhost")]
+        [string]$VirtualHost = $DefaultVirtualHost,
 
         # Name of RabbitMQ Exchange.
-        [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=1)]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [Alias("exchange")]
         [string]$ExchangeName,
 
         # Name of RabbitMQ Queue.
-        [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=2)]
-        [Alias("queue", "QueueName")]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Alias("queue")]
         [string]$Name,
 
         # Routing key.
-        [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=3)]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [Alias("rk")]
         [string]$RoutingKey,
 
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true, Position=4)]
-        [Alias("HostName", "hn", "cn")]
-        [string]$HostName = $defaultComputerName,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("ComputerName")]
+        [string]$HostName = $DefaultHostName,
 
         # UserName to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
         [string]$UserName,
 
         # Password to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+        [securestring]$Password,
 
         # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+        [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
+        [PSCredential]$Credentials = $DefaultCredentials,
 
         # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+        [switch]$UseHttps,
 
         # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+        [int]$Port = 15672,
 
         # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
+        [switch]$SkipCertificateCheck
     )
 
-    Begin
-    {
+    begin {
         $Credentials = NormaliseCredentials
         $cnt = 0
 
     }
-    Process
-    {
-        if ($pscmdlet.ShouldProcess("$HostName/$VirtualHost", "Remove binding between exchange $ExchangeName and queue $Name"))
-        {
-            $url = "$(Format-BaseUrl -HostName $HostName -port $port -useHttps:$useHttps)api/bindings/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/e/$([System.Web.HttpUtility]::UrlEncode($ExchangeName))/q/$([System.Web.HttpUtility]::UrlEncode($Name))/$([System.Web.HttpUtility]::UrlEncode($RoutingKey))"
+    process {
+        if ($PSCmdlet.ShouldProcess("$HostName/$VirtualHost", "Remove binding between exchange $ExchangeName and queue $Name")) {
+            $url = "$(Format-BaseUrl -HostName $HostName -port $Port -UseHttps:$UseHttps)bindings/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/e/$([System.Web.HttpUtility]::UrlEncode($ExchangeName))/q/$([System.Web.HttpUtility]::UrlEncode($Name))/$([System.Web.HttpUtility]::UrlEncode($RoutingKey))"
             Write-Verbose "Invoking REST API: $url"
         
-            Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Delete -SkipCertificateCheck:$skipCertificateCheck
+            Invoke-RestMethod -Uri $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Delete -SkipCertificateCheck:$SkipCertificateCheck
 
             Write-Verbose "Removed binding between exchange $ExchangeName and queue $Name $n on $HostName/$VirtualHost"
             $cnt++
         }
     }
-    End
-    {
+    end {
         if ($cnt -gt 1) { Write-Verbose "Unbound $cnt Queues." }
     }
 }

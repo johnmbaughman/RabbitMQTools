@@ -1,17 +1,15 @@
-﻿function SendItemsToOutput
-{
+﻿function SendItemsToOutput {
     Param
     (
-        [parameter()]
-        [PSObject[]]$items,
+        [Parameter()]
+        [PSObject[]]$Items,
 
-        [parameter(Mandatory=$true)]
-        [string[]]$typeName
+        [Parameter(Mandatory = $true)]
+        [string[]]$TypeName
     )
 
-    foreach ($i in $items)
-    {
-        $i.PSObject.TypeNames.Insert(0, $typeName)
+    foreach ($i in $Items) {
+        $i.PSObject.TypeNames.Insert(0, $TypeName)
         Write-Output $i
     }
 }

@@ -1,12 +1,14 @@
-﻿function NamesToString
-{
+﻿function NamesToString {
     Param
     (
-        [string[]]$name,
-        [string]$altText = ""
+        [string[]]
+        $Name,
+
+        [string]
+        $AltText = ""
     )
 
-    if (-not $name) { return $altText }
+    if (-not $Name) { return $AltText }
 
-    return $name -join ';'
+    return $Name -join ';'
 }

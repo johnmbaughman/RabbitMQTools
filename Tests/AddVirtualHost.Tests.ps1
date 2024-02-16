@@ -59,7 +59,7 @@ Describe -Tags "Example" "Add-RabbitMQVirtualHost" {
         TearDownTest
     }
     
-    It "should get VirtualHost with ComputerName to be created from the pipe" {
+    It "should get VirtualHost with HostName to be created from the pipe" {
     
         $pipe = $(
             New-Object -TypeName psobject -Prop @{"HostName" = $server; "Name" = "vh3" }

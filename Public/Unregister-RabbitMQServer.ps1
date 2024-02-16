@@ -10,35 +10,29 @@
 
    Removes server 127.0.0.1 from auto completition list for HostName parameter.
 #>
-function Unregister-RabbitMQServer
-{
+function Unregister-RabbitMQServer {
     [CmdletBinding()]
     Param
     (
         # Name of the RabbitMQ server to be unregistered.
-        [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
-        $BaseUri
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        $HostName
     )
 
-    Begin
-    {
-        if (-not $global:RabbitMQServers)
-        { 
+    begin {
+        if (-not $global:RabbitMQServers) { 
             $global:RabbitMQServers = @() 
         }
     }
     
-    Process
-    {
+    process {
         $obj += $global:RabbitMQServers | Where-Object ListItemText -eq $HostName
 
-        if ($obj)
-        {
+        if ($obj) {
             $global:RabbitMQServers = $global:RabbitMQServers | Where-Object ListItemText -ne $HostName
         }
     }
 
-    End
-    {
+    end {
     }
 }

@@ -45,63 +45,58 @@
 .LINK
     https://www.rabbitmq.com/management.html - information about RabbitMQ management plugin.
 #>
-function Get-RabbitMQUser
-{
-    [CmdletBinding(SupportsShouldProcess=$true, PositionalBinding=$false)]
-    Param
-    (
-        # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
-        [string[]]$Name,
+function Get-RabbitMQUser {
+   [CmdletBinding(SupportsShouldProcess = $true, PositionalBinding = $false)]
+   Param
+   (
+       # Name of user.
+       [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+       [string[]]$User = "",
 
-        # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
-        [Alias("cn", "HostName")]
-        [string]$HostName = $defaultComputerName,
+      # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
+      [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+      [Alias(, "ComputerName")]
+      [string]$HostName = $DefaultHostName,
         
-        [ValidateSet("Default", "Flat")]
-        [string]$View,
+      [ValidateSet("Default", "Flat")]
+      [string]$View,
 
-        # UserName to use when logging to RabbitMq server. Default value is guest.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$UserName,
+      # UserName to use when logging to RabbitMq server. Default value is guest.
+      [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+      [string]$UserName,
 
-        # Password to use when logging to RabbitMq server. Default value is guest.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+      # Password to use when logging to RabbitMq server. Default value is guest.
+      [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+      [securestring]$Password,
 
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+      [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
+      [PSCredential]$Credentials = $DefaultCredentials,
 
-        # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+      # Sets whether to use HTTPS or HTTP
+      [switch]$UseHttps,
 
-        # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+      # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
+      [int]$Port = 15672,
 
-        # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
-    )
+      # Skips the certificate check, useful for localhost and self-signed certificates.
+      [switch]$SkipCertificateCheck
+   )
 
-    Begin
-    {
-        $Credentials = NormaliseCredentials
-    }
+   begin {
+      $Credentials = NormaliseCredentials
+   }
 
-    Process
-    {
-        if ($pscmdlet.ShouldProcess("server $HostName", "Get user(s)"))
-        {
-            $result = GetItemsFromRabbitMQApi -HostName $HostName $Credentials "users" -useHttps:$useHttps -port:$port -SkipCertificateCheck:$skipCertificateCheck
-            $result = ApplyFilter $result 'name' $Name
-            $result | Add-Member -NotePropertyName "HostName" -NotePropertyValue $HostName
+   process {
+      if ($PSCmdlet.ShouldProcess("server $HostName", "Get user(s)")) {
+         $result = GetItemsFromRabbitMQApi -HostName $HostName -Credentials $Credentials -Function "users" -UseHttps:$UseHttps -port:$Port -SkipCertificateCheck:$SkipCertificateCheck
+         $result = ApplyFilter $result 'name' $User
+         $result | Add-Member -NotePropertyName "HostName" -NotePropertyValue $HostName
  
-            if (-not $View) { SendItemsToOutput $result "RabbitMQ.User" }
-            else { SendItemsToOutput $result "RabbitMQ.User" | ft -View $View }
-        }
-    }
+         if (-not $View) { SendItemsToOutput -Items $result -TypeName "RabbitMQ.User" }
+         else { SendItemsToOutput -Items $result -TypeName "RabbitMQ.User" | Format-Table -View $View }
+      }
+   }
     
-    End
-    {
-    }
+   end {
+   }
 }

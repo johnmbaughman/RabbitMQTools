@@ -1,21 +1,22 @@
-﻿function ApplyFilter
-{
+﻿function ApplyFilter {
     Param (
-        [parameter()]
-        [PSObject[]]$items,
+        [Parameter()]
+        [PSObject[]]$Items,
         
-        [parameter(Mandatory=$true)]
-        [string]$prop,
+        [Parameter(Mandatory = $true)]
+        [string]$Property,
         
-        [string[]]$name
+        [string[]]$Name
     )
 
-    if (-not $name) { return $items }
+    if (-not $Name) { return $Items }
             
     # apply property filter
     $filter = @()
-    foreach($n in $name) { $filter += '$_.' + $prop + '-like "' + $n + '"' }
+    foreach ($name in $Names) { 
+        $filter += '$_.' + $Property + '-like "' + $name + '"' 
+    }
 
-    $sb = [scriptblock]::create($filter -join ' -or ')
-    return $items | Where-Object $sb
+    $script = [scriptblock]::Create($filter -join ' -or ')
+    return $Items | Where-Object $script
 }

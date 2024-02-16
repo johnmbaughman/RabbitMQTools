@@ -28,53 +28,51 @@
 .LINK
     https://www.rabbitmq.com/management.html - information about RabbitMQ management plugin.
 #>
-function Set-RabbitMQUser
-{
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact="Medium")]
+function Set-RabbitMQUser {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = "Medium")]
     Param
     (
         # Name of user to update.
-        [parameter(Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [string]$Name,
 
         # New password for user.
-        [parameter(ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=1)]
-        [string]$NewPassword,
+        [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [securestring]$NewPassword,
 
         # Comma-separated list of user tags.
-        [parameter(ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=2)]
-        [ValidateSet("administrator", "monitoring", "policymaker", "management","impersonator","none")]
+        [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [ValidateSet("administrator", "monitoring", "policymaker", "management", "impersonator", "none")]
         [string[]]$Tag,
 
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
-        [Alias("HostName", "hn", "cn")]
-        [string]$HostName = $defaultComputerName,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("ComputerName")]
+        [string]$HostName = $DefaultHostName,
         
         # UserName to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
         [string]$UserName,
 
         # Password to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+        [securestring]$Password,
 
         # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+        [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
+        [PSCredential]$Credentials = $DefaultCredentials,
 
         # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+        [switch]$UseHttps,
 
         # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+        [int]$Port = 15672,
 
         # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
+        [switch]$SkipCertificateCheck
     )
 
-    Begin
-    {
+    begin {
         $Credentials = NormaliseCredentials
 
         $user = Get-RabbitMQUser -Credentials $Credentials -HostName $HostName -Name $Name
@@ -82,30 +80,26 @@ function Set-RabbitMQUser
         
         $cnt = 0
     }
-    Process
-    {
-        if ($pscmdlet.ShouldProcess("server: $HostName", $(GetShouldProcessText)))
-        {
-            $url = "$(Format-BaseUrl -HostName $HostName -port $port -useHttps:$useHttps)api/users/$([System.Web.HttpUtility]::UrlEncode($Name))"
+    process {
+        if ($PSCmdlet.ShouldProcess("server: $HostName", $(GetShouldProcessText))) {
+            $url = "$(Format-BaseUrl -HostName $HostName -port $Port -UseHttps:$UseHttps)users/$([System.Web.HttpUtility]::UrlEncode($Name))"
             $body = @{}
 
             if ($NewPassword) { $body.Add("password", $NewPassword) }
             if ($Tag) { $body.Add("tags", $Tag -join ',') } else { $body.Add("tags", $user.tags) }
             $bodyJson = $body | ConvertTo-Json
-            Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Put -ContentType "application/json" -Body $bodyJson -SkipCertificateCheck:$skipCertificateCheck
+            Invoke-RestMethod -Uri $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Put -ContentType "application/json" -Body $bodyJson -SkipCertificateCheck:$SkipCertificateCheck
 
             Write-Verbose "Update user $User"
             $cnt++
         }
     }
-    End
-    {
+    end {
         if ($cnt -gt 1) { Write-Verbose "Updated $cnt new users." }
     }
 }
 
-function GetShouldProcessText
-{
+function GetShouldProcessText {
     $str = "Update "
     if ($NewPassword -and $Tags) { $str += "password and tags" }
     if ($NewPassword) { $str += "password " }

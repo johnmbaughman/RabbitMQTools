@@ -27,60 +27,55 @@
 .LINK
     https://www.rabbitmq.com/management.html - information about RabbitMQ management plugin.
 #>
-function Remove-RabbitMQUser
-{
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact="High")]
+function Remove-RabbitMQUser {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = "High")]
     Param
     (
         # Name of user to delete.
-        [parameter(Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [string]$Name,
 
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
-        [Alias("HostName", "hn", "cn")]
-        [string]$HostName = $defaultComputerName,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("ComputerName")]
+        [string]$HostName = $DefaultHostName,
 
         # UserName to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
         [string]$UserName,
 
         # Password to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+        [securestring]$Password,
 
         # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+        [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
+        [PSCredential]$Credentials = $DefaultCredentials,
 
         # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+        [switch]$UseHttps,
 
         # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+        [int]$Port = 15672,
 
         # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
+        [switch]$SkipCertificateCheck
     )
 
-    Begin
-    {
+    begin {
         $Credentials = NormaliseCredentials
         $cnt = 0
     }
-    Process
-    {
-        if ($pscmdlet.ShouldProcess("server: $HostName", "Delete user $Name"))
-        {
-            $url = "$(Format-BaseUrl -HostName $HostName -port $port -useHttps:$useHttps)api/users/$([System.Web.HttpUtility]::UrlEncode($Name))"
-            Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Delete -ContentType "application/json" -SkipCertificateCheck:$skipCertificateCheck
+    process {
+        if ($PSCmdlet.ShouldProcess("server: $HostName", "Delete user $Name")) {
+            $url = "$(Format-BaseUrl -HostName $HostName -port $Port -UseHttps:$UseHttps)users/$([System.Web.HttpUtility]::UrlEncode($Name))"
+            Invoke-RestMethod -Uri $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Delete -ContentType "application/json" -SkipCertificateCheck:$SkipCertificateCheck
 
             Write-Verbose "Deleted user $User"
             $cnt++
         }
     }
-    End
-    {
+    end {
         if ($cnt -gt 1) { Write-Verbose "Deleted $cnt users." }
     }
 }

@@ -57,93 +57,85 @@
 .LINK
     https://www.rabbitmq.com/management.html - information about RabbitMQ management plugin.
 #>
-function Get-RabbitMQQueue
-{
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact='None')]
-    Param
-    (
-        # Name of RabbitMQ queue.
-        [parameter(ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
-        [Alias("queue", "QueueName")]
-        [string[]]$Name = "",
+function Get-RabbitMQQueue {
+   [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'None')]
+   Param
+   (
+      # Name of RabbitMQ queue.
+      [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+      [Alias("queue")]
+      [string[]]$Name = "",
                
-        # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
-        [Alias("HostName", "hn", "cn")]
-        [string]$HostName = $defaultComputerName,
+      # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
+      [Parameter(ValueFromPipelineByPropertyName = $true)]
+      [Alias("ComputerName")]
+      [string]$HostName = $DefaultHostName,
 
-        # Name of the virtual host to filter channels by.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
-        [Alias("vh", "vhost")]
-        [string]$VirtualHost,
+      # Name of the virtual host to filter channels by.
+      [Parameter(ValueFromPipelineByPropertyName = $true)]
+      [Alias("vhost")]
+      [string]$VirtualHost,
 
-        # When set then returns only queues which have messages.
-        [switch]$NotEmpty,
+      # When set then returns only queues which have messages.
+      [switch]$NotEmpty,
 
-        # When set then displays queue statistics.
-        [switch]$ShowStats,
+      # When set then displays queue statistics.
+      [switch]$ShowStats,
 
-        # UserName to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$UserName,
+      # UserName to use when logging to RabbitMq server.
+      [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+      [string]$UserName,
 
-        # Password to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+      # Password to use when logging to RabbitMq server.
+      [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+      [securestring]$Password,
 
-        # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+      # Credentials to use when logging to RabbitMQ server.
+      [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
+      [PSCredential]$Credentials = $DefaultCredentials,
 
-        # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+      # Sets whether to use HTTPS or HTTP
+      [switch]$UseHttps,
 
-        # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+      # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
+      [int]$Port = 15672,
 
-        # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
-    )
+      # Skips the certificate check, useful for localhost and self-signed certificates.
+      [switch]$SkipCertificateCheck
+   )
 
-    Begin
-    {
-        $Credentials = NormaliseCredentials
-    }
+   begin {
+      $Credentials = NormaliseCredentials
+   }
 
-    Process
-    {
-        if ($pscmdlet.ShouldProcess("server $HostName", "Get queues(s): $(NamesToString $Name '(all)')"))
-        {
-            $result = GetItemsFromRabbitMQApi -HostName $HostName $Credentials "queues" -useHttps:$useHttps -port:$port -SkipCertificateCheck:$skipCertificateCheck
+   process {
+      if ($PSCmdlet.ShouldProcess("server $HostName", "Get queues(s): $(NamesToString -Name $Name -AltText '(all)')")) {
+         $result = GetItemsFromRabbitMQApi -HostName $HostName -Credentials $Credentials -Function "queues" -UseHttps:$UseHttps -port:$Port -SkipCertificateCheck:$SkipCertificateCheck
             
-            $result = ApplyFilter $result 'name' $Name
-            if ($VirtualHost) { $result = ApplyFilter $result 'vhost' $VirtualHost }
+         $result = ApplyFilter $result 'name' $Name
+         if ($VirtualHost) { $result = ApplyFilter $result 'vhost' $VirtualHost }
             
-            foreach ($item in $result)
-            {
-                if ($item.messages -eq $null) { $item | Add-Member -MemberType NoteProperty -Name messages -Value 0 }
-                if ($item.messages_ready -eq $null) { $item | Add-Member -MemberType NoteProperty -Name messages_ready -Value 0 }
-                if ($item.messages_unacknowledged -eq $null) { $item | Add-Member -MemberType NoteProperty -Name messages_unacknowledged -Value 0 }
-            }
+         foreach ($item in $result) {
+            if ($null -eq $item.messages) { $item | Add-Member -MemberType NoteProperty -Name messages -Value 0 }
+            if ($null -eq $item.messages_ready) { $item | Add-Member -MemberType NoteProperty -Name messages_ready -Value 0 }
+            if ($null -eq $item.messages_unacknowledged) { $item | Add-Member -MemberType NoteProperty -Name messages_unacknowledged -Value 0 }
+         }
 
-            if ($NotEmpty) { 
-                $result = $result | ? messages -ne 0 
-            }
+         if ($NotEmpty) { 
+            $result = $result | Where-Object messages -NE 0 
+         }
 
-            $result | Add-Member -NotePropertyName "HostName" -NotePropertyValue $HostName
+         $result | Add-Member -NotePropertyName "HostName" -NotePropertyValue $HostName
 
-            if ($ShowStats)
-            {
-                SendItemsToOutput $result "RabbitMQ.Queue" | ft -View Stats
-            }
-            else
-            {
-                SendItemsToOutput $result "RabbitMQ.Queue"
-            }
-        }
-    }
+         if ($ShowStats) {
+            SendItemsToOutput -Items $result -TypeName "RabbitMQ.Queue" | Format-Table -View Stats
+         }
+         else {
+            SendItemsToOutput -Items $result -TypeName "RabbitMQ.Queue"
+         }
+      }
+   }
     
-    End
-    {
-    }
+   end {
+   }
 }

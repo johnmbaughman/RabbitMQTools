@@ -56,69 +56,64 @@
 .LINK
     https://www.rabbitmq.com/management.html - information about RabbitMQ management plugin.
 #>
-function Get-RabbitMQExchange
-{
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact='None')]
-    Param
-    (
-        # Name of RabbitMQ Exchange.
-        [parameter(ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
-        [Alias("ex", "Exchange", "ExchangeName")]
-        [string[]]$Name = "",
+function Get-RabbitMQExchange {
+   [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'None')]
+   Param
+   (
+      # Name of RabbitMQ Exchange.
+      [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+      [Alias("Exchange")]
+      [string[]]$Name = "",
 
-        # Name of RabbitMQ Virtual Host.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
-        [Alias("vh")]
-        [string]$VirtualHost = "",
+      # Name of RabbitMQ Virtual Host.
+      [Parameter(ValueFromPipelineByPropertyName = $true)]
+      [Alias("vhost")]
+      [string]$VirtualHost = "",
         
-        # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
-        [Alias("HostName", "hn", "cn")]
-        [string]$HostName = $defaultComputerName,
+      # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
+      [Parameter(ValueFromPipelineByPropertyName = $true)]
+      [Alias("ComputerName")]
+      [string]$HostName = $DefaultHostName,
 
-        # UserName to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$UserName,
+      # UserName to use when logging to RabbitMq server.
+      [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+      [string]$UserName,
 
-        # Password to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+      # Password to use when logging to RabbitMq server.
+      [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+      [securestring]$Password,
 
-        # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+      # Credentials to use when logging to RabbitMQ server.
+      [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
+      [PSCredential]$Credentials = $DefaultCredentials,
 
-        # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+      # Sets whether to use HTTPS or HTTP
+      [switch]$UseHttps,
 
-        # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+      # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
+      [int]$Port = 15672,
 
-        # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
-    )
+      # Skips the certificate check, useful for localhost and self-signed certificates.
+      [switch]$SkipCertificateCheck
+   )
 
-    Begin
-    {
-        $Credentials = NormaliseCredentials
-    }
+   begin {
+      $Credentials = NormaliseCredentials
+   }
 
-    Process
-    {
-        if ($pscmdlet.ShouldProcess("server $HostName", "Get exchange(s): $(NamesToString $Name '(all)')"))
-        {
-            $exchanges = GetItemsFromRabbitMQApi -HostName $HostName $Credentials "exchanges" -useHttps:$useHttps -port:$port -SkipCertificateCheck:$skipCertificateCheck
+   process {
+      if ($PSCmdlet.ShouldProcess("server $HostName", "Get exchange(s): $(NamesToString -Name $Name -AltText '(all)')")) {
+         $exchanges = GetItemsFromRabbitMQApi -HostName $HostName -Credentials $Credentials -Function "exchanges" -UseHttps:$UseHttps -port:$Port -SkipCertificateCheck:$SkipCertificateCheck
             
-            $result = ApplyFilter $exchanges 'vhost' $VirtualHost
-            $result = ApplyFilter $result 'name' $Name
+         $result = ApplyFilter $exchanges 'vhost' $VirtualHost
+         $result = ApplyFilter $result 'name' $Name
 
-            $result | Add-Member -NotePropertyName "HostName" -NotePropertyValue $HostName
+         $result | Add-Member -NotePropertyName "HostName" -NotePropertyValue $HostName
 
-            SendItemsToOutput $result "RabbitMQ.Exchange"
-        }
-    }
+         SendItemsToOutput -Items $result -TypeName "RabbitMQ.Exchange"
+      }
+   }
     
-    End
-    {
-    }
+   end {
+   }
 }

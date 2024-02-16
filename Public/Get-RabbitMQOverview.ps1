@@ -33,57 +33,51 @@
 .LINK
     https://www.rabbitmq.com/management.html - information about RabbitMQ management plugin.
 #>
-function Get-RabbitMQOverview
-{
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact='None')]
+function Get-RabbitMQOverview {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'None')]
     Param
     (
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
-        [Alias("cn", "HostName", "HostName")]
-        [string[]]$Name = $defaultComputerName,
+        [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [Alias("ComputerName")]
+        [string[]]$HostName = $DefaultHostName,
 
         # UserName to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
         [string]$UserName,
 
         # Password to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+        [securestring]$Password,
 
         # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+        [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
+        [PSCredential]$Credentials = $DefaultCredentials,
 
         # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+        [switch]$UseHttps,
 
         # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+        [int]$Port = 15672,
 
         # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
+        [switch]$SkipCertificateCheck
     )
 
-    Begin
-    {
+    begin {
         $Credentials = NormaliseCredentials
     }
 
-    Process
-    {
-        if (-not $pscmdlet.ShouldProcess("server $HostName", "Get overview: $(NamesToString $Name '(all)')"))
-        {
-            foreach ($cn in $Name)
-            {
+    process {
+        if (-not $PSCmdlet.ShouldProcess("server $HostName", "Get overview: $(NamesToString -Name $Name -AltText '(all)')")) {
+            foreach ($cn in $Name) {
                 Write-Host "Getting overview for server: $cn"
             }
             return;
         }
 
-        foreach ($cn in $Name)
-        {
-            $overview = GetItemsFromRabbitMQApi -HostName $cn $Credentials "overview" -useHttps:$useHttps -port:$port -SkipCertificateCheck:$skipCertificateCheck
+        foreach ($cn in $Name) {
+            $overview = GetItemsFromRabbitMQApi -HostName $HostName -Credentials $Credentials -Function "overview" -UseHttps:$UseHttps -port:$Port -SkipCertificateCheck:$SkipCertificateCheck
             $overview | Add-Member -NotePropertyName "HostName" -NotePropertyValue $cn
             $overview.PSObject.TypeNames.Insert(0, "RabbitMQ.ServerOverview")
 
@@ -91,7 +85,6 @@ function Get-RabbitMQOverview
         }
     }
     
-    End
-    {
+    end {
     }
 }

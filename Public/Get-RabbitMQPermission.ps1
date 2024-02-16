@@ -46,71 +46,65 @@
 .LINK
     https://www.rabbitmq.com/management.html - information about RabbitMQ management plugin.
 #>
-function Get-RabbitMQPermission
-{
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact='None')]
+function Get-RabbitMQPermission {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'None')]
     Param
     (
         # Name of RabbitMQ Virtual Host.
-        [parameter(ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position = 0)]
-        [Alias("vh")]
+        [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [Alias("vhost")]
         [string[]]$VirtualHost = "",
 
-        # Name of RabbitMQ Virtual Host.
-        [parameter(ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position = 1)]
+        # Name of user.
+        [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [string[]]$User = "",
 
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
-        [Alias("HostName", "hn", "cn")]
-        [string]$HostName = $defaultComputerName,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("ComputerName")]
+        [string]$HostName = $DefaultHostName,
 
         # UserName to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
         [string]$UserName,
 
         # Password to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+        [securestring]$Password,
 
         # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+        [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
+        [PSCredential]$Credentials = $DefaultCredentials,
 
         # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+        [switch]$UseHttps,
 
         # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+        [int]$Port = 15672,
 
         # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
+        [switch]$SkipCertificateCheck
     )
 
-    Begin
-    {
+    begin {
         $Credentials = NormaliseCredentials
     }
 
-    Process
-    {
-        if ($pscmdlet.ShouldProcess("server $HostName", "Get permission(s) for VirtualHost = $(NamesToString $VirtualHost '(all)') and User = $(NamesToString $User '(all)')"))
-        {
-            $result = GetItemsFromRabbitMQApi -HostName $HostName $Credentials "permissions" -useHttps:$useHttps -port:$port -SkipCertificateCheck:$skipCertificateCheck
+    process {
+        if ($PSCmdlet.ShouldProcess("server $HostName", "Get permission(s) for VirtualHost = $(NamesToString -Name $VirtualHost -AltText '(all)') and User = $(NamesToString -Name $User -AltText '(all)')")) {
+            $result = GetItemsFromRabbitMQApi -HostName $HostName -Credentials $Credentials -Function "permissions" -UseHttps:$UseHttps -port:$Port -SkipCertificateCheck:$SkipCertificateCheck
             $result = ApplyFilter $result "vhost" $VirtualHost
             $result = ApplyFilter $result "user" $User
 
 
-            foreach($i in $result)
-            {
+            foreach ($i in $result) {
                 $i | Add-Member -NotePropertyName "HostName" -NotePropertyValue $HostName
             }
 
-            SendItemsToOutput $result "RabbitMQ.Permission"
+            SendItemsToOutput -Items $result -TypeName "RabbitMQ.Permission"
         }
     }
     
-    End
-    {
+    end {
     }
 }

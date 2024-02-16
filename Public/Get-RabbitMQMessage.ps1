@@ -34,42 +34,40 @@
 .LINK
     https://www.rabbitmq.com/management.html - information about RabbitMQ management plugin.
 #>
-function Get-RabbitMQMessage
-{
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact='None')]
+function Get-RabbitMQMessage {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'None')]
     Param
     (
         # Name of RabbitMQ Queue.
-        [parameter(Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
-        [Alias("queue", "QueueName")]
-        [string]$Name = "",
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [Alias("queue")]
+        [string]$Name,
 
         # Name of the virtual host to filter channels by.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
-        [Alias("vh", "vhost")]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("vhost")]
         [string]$VirtualHost,
         
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
-        [Alias("HostName", "hn", "cn")]
-        [string]$HostName = $defaultComputerName,
-
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("ComputerName")]
+        [string]$HostName = $DefaultHostName,
 
         # Number of messages to get. Default value is 1.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [int]$Count = 1,
 
         # Indicates whether messages should be removed from the queue. Default setting is to not remove messages.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [switch]$Remove,
 
         # Determines message body encoding.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [ValidateSet("auto", "base64")]
         [string]$Encoding = "auto",
 
         # Indicates whether messages body should be truncated to given size (in bytes).
-        [parameter(ValueFromPipelineByPropertyName=$true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [int]$Truncate,
 
         # Indicates what view should be used to present the data.
@@ -77,49 +75,46 @@ function Get-RabbitMQMessage
         [string]$View = "Default",        
         
         # UserName to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
         [string]$UserName,
 
         # Password to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+        [securestring]$Password,
 
         # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+        [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
+        [PSCredential]$Credentials = $DefaultCredentials,
 
         # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+        [switch]$UseHttps,
 
         # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+        [int]$Port = 15672,
 
         # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
+        [switch]$SkipCertificateCheck
     )
 
-    Begin
-    {
+    begin {
         $Credentials = NormaliseCredentials
         $cnt = 0
     }
-    Process
-    {
-        if (-not $VirtualHost)
-        {
+    process {
+        if (-not $VirtualHost) {
             # figure out the Virtual Host value
             $p = @{}
             $p.Add("Credentials", $Credentials)
             if ($HostName) { $p.Add("HostName", $HostName) }
             
-            $queues = Get-RabbitMQQueue @p | Where-Object Name -eq $Name
+            $queues = Get-RabbitMQQueue @p | Where-Object Name -EQ $Name
 
             if (-not $queues) { return; }
 
-            if (-not $queues.GetType().IsArray)
-            {
+            if (-not $queues.GetType().IsArray) {
                 $VirtualHost = $queues.vhost
-            } else {
+            }
+            else {
                 $vhosts = $queues | Select-Object vhost
                 $s = $vhosts -join ','
                 Write-Error "Queue $Name exists in multiple Virtual Hosts: $($queues.vhost -join ', '). Please specify Virtual Host to use."
@@ -128,17 +123,16 @@ function Get-RabbitMQMessage
 
 
         [string]$s = ""
-        if ([bool]$Remove) { $s = "Messages will be removed from the queue." } else {$s = "Messages will be requeued."}
-        if ($pscmdlet.ShouldProcess("server: $HostName/$VirtualHost", "Get $Count message(s) from queue $Name. $s"))
-        {
-            $url = "$(Format-BaseUrl -HostName $HostName -port $port -useHttps:$useHttps)queues/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($Name))/get"
+        if ([bool]$Remove) { $s = "Messages will be removed from the queue." } else { $s = "Messages will be requeued." }
+        if ($PSCmdlet.ShouldProcess("server: $HostName/$VirtualHost", "Get $Count message(s) from queue $Name. $s")) {
+            $url = "$(Format-BaseUrl -HostName $HostName -port $Port -UseHttps:$UseHttps)queues/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($Name))/get"
             Write-Verbose "Invoking REST API: $url"
 
             $body = @{
-                "count" = $Count
-                "requeue" = -not [bool]$Remove
+                "count"    = $Count
+                "requeue"  = -not [bool]$Remove
                 "encoding" = $Encoding
-                "ackmode" = @("ack_requeue_true","ack_requeue_false")[[bool]$Remove]
+                "ackmode"  = @("ack_requeue_true", "ack_requeue_false")[[bool]$Remove]
             }
             if ($Truncate) { $body.Add("truncate", $Truncate) }
 
@@ -146,39 +140,33 @@ function Get-RabbitMQMessage
 
             Write-Debug "body: $bodyJson"
 
-            $result = Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Post -ContentType "application/json" -Body $bodyJson -SkipCertificateCheck:$skipCertificateCheck
+            $result = Invoke-RestMethod -Uri $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Post -ContentType "application/json" -Body $bodyJson -SkipCertificateCheck:$SkipCertificateCheck
 
             $result | Add-Member -NotePropertyName "QueueName" -NotePropertyValue $Name
 
-            foreach ($item in $result)
-            {
+            foreach ($item in $result) {
                 $cnt++
                 $item | Add-Member -NotePropertyName "no" -NotePropertyValue $cnt
                 $item | Add-Member -NotePropertyName "HostName" -NotePropertyValue $HostName
                 $item | Add-Member -NotePropertyName "VirtualHost" -NotePropertyValue $VirtualHost
             }
 
-            if ($View)
-            {
-                switch ($View.ToLower())
-                {
-                    'payload'
-                    {
-                        SendItemsToOutput $result "RabbitMQ.QueueMessage" | Format-Custom
+            if ($View) {
+                switch ($View.ToLower()) {
+                    'payload' {
+                        SendItemsToOutput -Items $result -TypeName "RabbitMQ.QueueMessage" | Format-Custom
                     }
 
-                    'details'
-                    {
-                        SendItemsToOutput $result "RabbitMQ.QueueMessage" | Format-Table -View Details
+                    'details' {
+                        SendItemsToOutput -Items $result -TypeName "RabbitMQ.QueueMessage" | Format-Table -View Details
                     }
                     
-                    Default { SendItemsToOutput $result "RabbitMQ.QueueMessage" }
+                    Default { SendItemsToOutput -Items $result -TypeName "RabbitMQ.QueueMessage" }
                 }
             }
         }
     }
-    End
-    {
+    end {
         Write-Verbose "`r`nGot $cnt messages from queue $Name, vhost $VirtualHost, server: $HostName."
     }
 }

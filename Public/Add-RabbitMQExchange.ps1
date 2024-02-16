@@ -58,75 +58,74 @@
     https://www.rabbitmq.com/management.html - information about RabbitMQ management plugin.
 #>
 function Add-RabbitMQExchange {
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact="Medium")]
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = "Medium")]
     Param
     (
         # Name of RabbitMQ Exchange.
-        [parameter(Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
-        [Alias("Exchange", "ExchangeName")]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [Alias("Exchange")]
         [string[]]$Name,
 
         # Type of the Exchange to create.
-        [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [ValidateSet("topic", "fanout", "direct", "headers")]
         [string]$Type,
 
         # Determines whether the exchange should be Durable.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [switch]$Durable,
         
         # Determines whether the exchange will be deleted once all queues have finished using it.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [switch]$AutoDelete,
         
         # Determines whether the exchange should be Internal.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [switch]$Internal,
 
         # Allows to set alternate exchange to which all messages which cannot be routed will be send.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [Alias("alt")]
         [string]$AlternateExchange,
 
         # Name of RabbitMQ Virtual Host.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
-        [Alias("vh", "vhost")]
-        [string]$VirtualHost = $defaultVirtualhost,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("vhost")]
+        [string]$VirtualHost = $DefaultVirtualHost,
 
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
-        [Alias("HostName", "hn", "cn")]
-        [string]$HostName = $defaultComputerName,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("ComputerName")]
+        [string]$HostName = $DefaultHostName,
 
         # UserName to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
         [string]$UserName,
 
         # Password to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+        [securestring]$Password,
 
         # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+        [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
+        [PSCredential]$Credentials = $DefaultCredentials,
 
         # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+        [switch]$UseHttps,
 
         # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+        [int]$Port = 15672,
 
         # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
+        [switch]$SkipCertificateCheck
     )
 
-    Begin {
-    	# TODO: Review and alter
+    begin {
         $Credentials = NormaliseCredentials
     }
 
-    Process {
-        if ($pscmdlet.ShouldProcess("server: $HostName, vhost: $VirtualHost", "Add exchange(s): $(NamesToString $Name '(all)')")) {
+    process {
+        if ($PSCmdlet.ShouldProcess("server: $HostName, vhost: $VirtualHost", "Add exchange(s): $(NamesToString -Name $Name -AltText '(all)')")) {
             
             $body = @{ type = $Type }
 
@@ -138,18 +137,18 @@ function Add-RabbitMQExchange {
             $bodyJson = $body | ConvertTo-Json
 
             foreach ($n in $Name) {
-                $url = "$(Format-BaseUrl -HostName $HostName -port $port -useHttps:$useHttps)exchanges/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($n))"
-                Write-Verbose "Invoking REST API: $url"
+                $url = "$(Format-BaseUrl -HostName $HostName -port $Port -UseHttps:$UseHttps)exchanges/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($n))"
+                Write-Verbose -Message "Invoking REST API: $url"
         
-                Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Put -ContentType "application/json" -Body $bodyJson -SkipCertificateCheck:$skipCertificateCheck
+                Invoke-RestMethod -Uri $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Put -ContentType "application/json" -Body $bodyJson -SkipCertificateCheck:$SkipCertificateCheck
 
-                Write-Verbose "Created Exchange $n on server $HostName, Virtual Host $VirtualHost"
+                Write-Verbose -Message "Created Exchange $n on server $HostName, Virtual Host $VirtualHost"
                 $cnt++
             }
         }
     }
     
-    End {
-        if ($cnt -gt 1) { Write-Verbose "Created $cnt Exchange(s)." }
+    end {
+        if ($cnt -gt 1) { Write-Verbose -Message "Created $cnt Exchange(s)." }
     }
 }

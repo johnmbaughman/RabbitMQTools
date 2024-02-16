@@ -40,32 +40,32 @@ function Add-RabbitMQMessage
     Param
     (
         # Name of the virtual host to filter channels by.
-        [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true, Position=0)]
-        [Alias("vh", "vhost")]
-        [string]$VirtualHost = $defaultVirtualhost,
+        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
+        [Alias("vhost")]
+        [string]$VirtualHost = $DefaultVirtualHost,
 
         # Name of RabbitMQ Exchange.
-        [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=1)]
+        [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [Alias("exchange")]
         [string]$ExchangeName,
 
         # Routing key to be used when publishing message.
-        [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=2)]
+        [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [Alias("rk")]
         [string]$RoutingKey,
         
         # Massage's payload
-        [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=3)]
+        [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [string]$Payload,
 
         # Array with message properties.
-        [parameter(ValueFromPipelineByPropertyName=$true, Position=4)]
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
         $Properties,
 
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
-        [Alias("HostName", "hn", "cn")]
-        [string]$HostName = $defaultComputerName,
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
+        [Alias("ComputerName")]
+        [string]$HostName = $DefaultHostName,
         
         
         # UserName to use when logging to RabbitMq server.
@@ -74,20 +74,20 @@ function Add-RabbitMQMessage
 
         # Password to use when logging to RabbitMq server.
         [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+        [securestring]$Password,
 
         # Credentials to use when logging to RabbitMQ server.
         [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+        [PSCredential]$Credentials = $DefaultCredentials,
 
         # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+        [switch]$UseHttps,
 
         # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+        [int]$Port = 15672,
 
         # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
+        [switch]$SkipCertificateCheck
     )
 
     Begin
@@ -99,9 +99,9 @@ function Add-RabbitMQMessage
     
     Process
     {
-        if ($pscmdlet.ShouldProcess("server: $HostName/$VirtualHost", "Publish message to exchange $ExchangeName with routing key $RoutingKey"))
+        if ($PSCmdlet.ShouldProcess("server: $HostName/$VirtualHost", "Publish message to exchange $ExchangeName with routing key $RoutingKey"))
         {
-            $url = "$(Format-BaseUrl -HostName $HostName -port $port -useHttps:$useHttps)api/exchanges/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($ExchangeName))/publish"
+            $url = "$(Format-BaseUrl -HostName $HostName -port $Port -UseHttps:$UseHttps)exchanges/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($ExchangeName))/publish"
             Write-Verbose "Invoking REST API: $url"
 
             $body = @{
@@ -118,7 +118,7 @@ function Add-RabbitMQMessage
 
             while ($retryCounter -lt 3)
             {
-                $result = Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Post -ContentType "application/json" -Body $bodyJson -SkipCertificateCheck:$skipCertificateCheck
+                $result = Invoke-RestMethod -Uri $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Post -ContentType "application/json" -Body $bodyJson -SkipCertificateCheck:$SkipCertificateCheck
 
                 if ($result.routed -ne $true)
                 {

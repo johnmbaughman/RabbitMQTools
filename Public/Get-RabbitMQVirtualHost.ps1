@@ -56,65 +56,59 @@
 .LINK
     https://www.rabbitmq.com/management.html - information about RabbitMQ management plugin.
 #>
-function Get-RabbitMQVirtualHost
-{
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact='None')]
-    Param
-    (
-        # Name of RabbitMQ Virtual Host.
-        [parameter(ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position = 0)]
-        [Alias("vh", "VirtualHost")]
-        [string[]]$Name = "",
+function Get-RabbitMQVirtualHost {
+   [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'None')]
+   Param
+   (
+      # Name of RabbitMQ Virtual Host.
+      [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+      [Alias("vhost")]
+      [string[]]$Name = "",
 
-        # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
-        [Alias("HostName", "hn", "cn")]
-        [string]$HostName = $defaultComputerName,
+      # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
+      [Parameter(ValueFromPipelineByPropertyName = $true)]
+      [Alias("ComputerName")]
+      [string]$HostName = $DefaultHostName,
 
-        # UserName to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$UserName,
+      # UserName to use when logging to RabbitMq server.
+      [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+      [string]$UserName,
 
-        # Password to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+      # Password to use when logging to RabbitMq server.
+      [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+      [securestring]$Password,
 
-        # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+      # Credentials to use when logging to RabbitMQ server.
+      [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
+      [PSCredential]$Credentials = $DefaultCredentials,
 
-        # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+      # Sets whether to use HTTPS or HTTP
+      [switch]$UseHttps,
 
-        # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+      # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
+      [int]$Port = 15672,
 
-        # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
-    )
+      # Skips the certificate check, useful for localhost and self-signed certificates.
+      [switch]$SkipCertificateCheck
+   )
 
-    Begin
-    {
-        $Credentials = NormaliseCredentials
-    }
+   begin {
+      $Credentials = NormaliseCredentials
+   }
     
-    Process
-    {
-        if ($pscmdlet.ShouldProcess("server $HostName", "Get vhost(s): $(NamesToString $Name '(all)')"))
-        {
-            $vhosts = GetItemsFromRabbitMQApi -HostName $HostName $Credentials "vhosts" -useHttps:$useHttps -port:$port -SkipCertificateCheck:$skipCertificateCheck
-            $result = ApplyFilter $vhosts "name" $Name
+   process {
+      if ($PSCmdlet.ShouldProcess("server $HostName", "Get vhost(s): $(NamesToString -Name $Name -AltText '(all)')")) {
+         $vhosts = GetItemsFromRabbitMQApi -HostName $HostName -Credentials $Credentials -Function "vhosts" -UseHttps:$UseHttps -port:$Port -SkipCertificateCheck:$SkipCertificateCheck
+         $result = ApplyFilter $vhosts "name" $Name
 
-            foreach($i in $result)
-            {
-                $i | Add-Member -NotePropertyName "HostName" -NotePropertyValue $HostName
-            }
+         foreach ($i in $result) {
+            $i | Add-Member -NotePropertyName "HostName" -NotePropertyValue $HostName
+         }
 
-            SendItemsToOutput $result "RabbitMQ.VirtualHost"
-        }
-    }
+         SendItemsToOutput -Items $result -TypeName "RabbitMQ.VirtualHost"
+      }
+   }
 
-    End
-    {
-    }
+   end {
+   }
 }

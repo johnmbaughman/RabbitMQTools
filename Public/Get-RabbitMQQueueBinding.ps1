@@ -36,91 +36,95 @@
 .LINK
     https://www.rabbitmq.com/management.html - information about RabbitMQ management plugin.
 #>
-function Get-RabbitMQQueueBinding
-{
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact='None')]
+function Get-RabbitMQQueueBinding {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'None')]
     Param
     (
         # Name of RabbitMQ Queue.
-        [parameter(Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
-        [Alias("queue", "QueueName")]
-        [string[]]$Name = "",
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [Alias("queue")]
+        [string[]]$Name,
 
         # Name of the virtual host to filter channels by.
-        [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [Alias("vh", "vhost")]
-        [string]$VirtualHost,
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [Alias("vhost")]
+        [string]$VirtualHost = $DefaultVirtualHost,
 
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true, Position=2)]
-        [Alias("HostName", "hn", "cn")]
-        [string]$HostName = $defaultComputerName,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("ComputerName")]
+        [string]$HostName = $DefaultHostName,
 
         # UserName to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
         [string]$UserName,
 
         # Password to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+        [securestring]$Password,
 
         # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+        [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
+        [PSCredential]$Credentials = $DefaultCredentials,
 
         # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+        [switch]$UseHttps,
 
         # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+        [int]$Port = 15672,
 
         # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
+        [switch]$SkipCertificateCheck
     )
 
-    Begin
-    {
+    begin {
         $Credentials = NormaliseCredentials
     }
 
-    Process
-    {
-        if (-not $VirtualHost)
-        {
+    process {
+        if (-not $VirtualHost) {
             # figure out the Virtual Host value
             $p = @{}
             $p.Add("Credentials", $Credentials)
             if ($HostName) { $p.Add("HostName", $HostName) }
             
-            $queues = Get-RabbitMQQueue @p | Where-Object Name -eq $Name
+            $queues = Get-RabbitMQQueue @p | Where-Object Name -EQ $Name
 
             if (-not $queues) { return; }
 
-            if (-not $queues.GetType().IsArray)
-            {
+            if (-not $queues.GetType().IsArray) {
                 $VirtualHost = $queues.vhost
-            } else {
-                #$vhosts = $queues | Select-Object vhost
-                #$s = $vhosts -join ','
+            }
+            else {                
                 Write-Error "Queue $Name exists in multiple Virtual Hosts: $($queues.vhost -join ', '). Please specify Virtual Host to use."
             }
         }
 
         # TODO: Revisit to get Exchange bindings
-        if ($pscmdlet.ShouldProcess("server $HostName", "Get bindings for queue(s): $(NamesToString $Name '(all)')"))
-        {
-            foreach ($n in $Name)
-            {
-                $result = GetItemsFromRabbitMQApi -HostName $HostName $Credentials "queues/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($n))/bindings" -useHttps:$useHttps -port:$port -SkipCertificateCheck:$skipCertificateCheck
+        if ($PSCmdlet.ShouldProcess("server $HostName", "Get bindings for queue(s): $(NamesToString -Name $Name -AltText '(all)')")) {
+            foreach ($n in $Name) {
+                $result = GetItemsFromRabbitMQApi -HostName $HostName -Credentials $Credentials -Function "queues/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($n))/bindings" -UseHttps:$UseHttps -port:$Port -SkipCertificateCheck:$SkipCertificateCheck
 
                 $result | Add-Member -NotePropertyName "HostName" -NotePropertyValue $HostName
 
-                SendItemsToOutput $result "RabbitMQ.QueueBinding"
+                SendItemsToOutput -Items $result -TypeName "RabbitMQ.QueueBinding"
             }
         }
     }
     
-    End
-    {
+    end {
     }
 }
+
+
+# > Get-RabbitMQQueueBinding -Credentials $creds -UseHttps -SkipCertificateCheck -Name "PSQueue"
+# Invoke-RestMethod: C:\Personal\source\repos\RabbitMQTools\Private\GetItemsFromRabbitMQApi.ps1:35
+# Line |
+#   35 |      return Invoke-RestMethod -Uri $url -Credential $Credentials -Disa …
+#      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#      | Received an invalid status line: '§♥☺☻☻'.
+# Add-Member: C:\Personal\source\repos\RabbitMQTools\Public\Get-RabbitMQQueue.ps1:128
+# Line |
+#  128 |  …   $result | Add-Member -NotePropertyName "HostName" -NotePropertyValu …
+#      |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#      | Cannot bind argument to parameter 'InputObject' because it is null.

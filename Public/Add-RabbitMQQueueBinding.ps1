@@ -38,93 +38,87 @@
 .LINK
     https://www.rabbitmq.com/management.html - information about RabbitMQ management plugin.
 #>
-function Add-RabbitMQQueueBinding
-{
-    [CmdletBinding(DefaultParameterSetName='RoutingKey', SupportsShouldProcess=$true, ConfirmImpact="Low")]
+function Add-RabbitMQQueueBinding {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = "Low")]
     Param
     (
-        # Name of the virtual host.
-        [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true, Position=0)]
-        [Alias("vh", "vhost")]
-        [string]$VirtualHost = $defaultVirtualhost,
-
         # Name of RabbitMQ Exchange.
-        [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=1)]
-        [Alias("exchange", "source")]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Alias("exchange")]
         [string]$ExchangeName,
 
+        # Name of the virtual host.
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("vhost")]
+        [string]$VirtualHost = $DefaultVirtualHost,        
+
         # Name of RabbitMQ Queue.
-        [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=2)]
-        [Alias("queue", "QueueName", "destination")]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Alias("queue")]
         [string]$Name,
 
         # Routing key.
-        [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true, Position=3, ParameterSetName='RoutingKey')]
-        [Alias("rk", "routing_key")]
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'login')]
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'cred')]        
         [string]$RoutingKey,
 
         # Headers hashtable
-        [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=3, ParameterSetName='Headers')]
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'login')]
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'cred')]
         [Hashtable]$Headers = @{},
 
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true, Position=4)]
-        [Alias("HostName", "hn", "cn")]
-        [string]$HostName = $defaultComputerName,        
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("ComputerName")]
+        [string]$HostName = $DefaultHostName,        
         
         # UserName to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
         [string]$UserName,
 
         # Password to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+        [securestring]$Password,
 
         # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+        [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
+        [PSCredential]$Credentials = $DefaultCredentials,
 
         # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+        [switch]$UseHttps,
 
         # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+        [int]$Port = 15672,
 
         # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
+        [switch]$SkipCertificateCheck
     )
 
-    Begin
-    {
+    Begin {
         $Credentials = NormaliseCredentials
-        $cnt = 0
     }
 
-    Process
-    {
-        if ($pscmdlet.ShouldProcess("$HostName/$VirtualHost", "Add queue binding from exchange $ExchangeName to queue $Name with routing key $RoutingKey"))
-        {
-            foreach($n in $Name)
-            {
-                $url = "$(Format-BaseUrl -HostName $HostName -port $port -useHttps:$useHttps)bindings/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/e/$([System.Web.HttpUtility]::UrlEncode($ExchangeName))/q/$([System.Web.HttpUtility]::UrlEncode($Name))"
-                Write-Verbose "Invoking REST API: $url"
+    Process {
+        if ($PSCmdlet.ShouldProcess("$HostName/$VirtualHost", "Add queue binding from exchange $ExchangeName to queue $Name with routing key $RoutingKey")) {
+            
+            $url = "$(Format-BaseUrl -HostName $HostName -port $Port -UseHttps:$UseHttps)bindings/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/e/$([System.Web.HttpUtility]::UrlEncode($ExchangeName))/q/$([System.Web.HttpUtility]::UrlEncode($Name))"
+            Write-Verbose "Invoking REST API: $url"
 
-                $body = @{
-                    "routing_key" = $RoutingKey
-		            "arguments" = $headers
-                }
-
-                $bodyJson = $body | ConvertTo-Json
-                Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Post -ContentType "application/json" -Body $bodyJson -SkipCertificateCheck:$skipCertificateCheck
-
-                Write-Verbose "Bound exchange $ExchangeName to queue $Name $n on $HostName/$VirtualHost"
-                $cnt++
+            $body = @{
+                "routing_key" = $RoutingKey
+                "arguments"   = $headers
             }
+
+            $bodyJson = $body | ConvertTo-Json
+            Write-Verbose $bodyJson
+
+            Invoke-RestMethod -Uri $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Post -ContentType "application/json" -Body $bodyJson -SkipCertificateCheck:$SkipCertificateCheck
+
+            Write-Verbose "Bound exchange $ExchangeName to queue $N on $HostName/$VirtualHost"         
         }
     }
     
-    End
-    {
-        Write-Verbose "Created $cnt Binding(s)."
+    End {
+        Write-Verbose "Created binding."
     }
 }

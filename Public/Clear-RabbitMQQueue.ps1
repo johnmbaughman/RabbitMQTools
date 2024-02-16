@@ -26,66 +26,60 @@
 
    Removes all messages from queue "q1" in Virtual Host "vh1" on "rabbitmq.server.com" server.
 #>
-function Clear-RabbitMQQueue
-{
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact="High")]
+function Clear-RabbitMQQueue {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = "High")]
     Param
     (
-        # Name of RabbitMQ Virtual Host.
-        [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true, Position=0)]
-        [Alias("vh", "vhost")]
-        [string]$VirtualHost = $defaultVirtualHost,
+        # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("ComputerName")]
+        [string]$HostName = $DefaultHostName,
 
         # The name of the queue from which to receive messages
-        [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true, Position=1)]
-        [Alias("qn", "QueueName")]
-        [string]$Name,
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Alias("queue")]
+        [string]$Name,        
         
-        # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true, Position=2)]
-        [Alias("cn", "HostName")]
-        [string]$HostName = $defaultComputerName,
-        
+        # Name of RabbitMQ Virtual Host.
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [Alias("vhost")]
+        [string]$VirtualHost = $DefaultVirtualHost,        
         
         # UserName to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
         [string]$UserName,
 
         # Password to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+        [securestring]$Password,
 
         # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+        [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
+        [PSCredential]$Credentials = $DefaultCredentials,
 
         # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+        [switch]$UseHttps,
 
         # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+        [int]$Port = 15672,
 
         # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
+        [switch]$SkipCertificateCheck
     )
 
-    Begin
-    {
+    begin {
         $Credentials = NormaliseCredentials
     }
     
-    Process
-    {
-        if ($pscmdlet.ShouldProcess("server: $HostName/$VirtualHost", "purge queue $Name"))
-        {
-            $url = "$(Format-BaseUrl -HostName $HostName -port $port -useHttps:$useHttps)api/queues/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($Name))/contents"
+    process {
+        if ($PSCmdlet.ShouldProcess("server: $HostName/$VirtualHost", "purge queue $Name")) {
+            $url = "$(Format-BaseUrl -HostName $HostName -port $Port -UseHttps:$UseHttps)queues/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($Name))/contents"
             Write-Verbose "Invoking REST API: $url"
 
-            Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Delete -SkipCertificateCheck:$skipCertificateCheck
+            Invoke-RestMethod -Uri $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Delete -SkipCertificateCheck:$SkipCertificateCheck
         }
     }
 
-    End
-    {
+    end {
     }
 }

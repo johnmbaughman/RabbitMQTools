@@ -27,53 +27,51 @@
 .LINK
     https://www.rabbitmq.com/management.html - information about RabbitMQ management plugin.
 #>
-function Add-RabbitMQPermission
-{
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact="Medium")]
+function Add-RabbitMQPermission {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = "Medium")]
     Param
     (
         # Virtual host to set permission for.
-        [parameter(Mandatory=$false, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
-        [Alias("vhost", "vh")]
-        [string]$VirtualHost = $defaultVirtualhost,
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [Alias("vhost")]
+        [string]$VirtualHost = $DefaultVirtualHost,
 
         # Name of user to set permission for.
-        [parameter(Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=1)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [string]$User,
 
         # Configure permission regexp.
-        [parameter(Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=2)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [string]$Configure,
 
         # Read permission regexp.
-        [parameter(Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=3)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [string]$Read,
 
         # Write permission regexp.
-        [parameter(Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=4)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [string]$Write,
 
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
-        [Alias("HostName", "hn", "cn")]
-        [string]$HostName = $defaultComputerName,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("ComputerName")]
+        [string]$HostName = $DefaultHostName,
         
         
         # UserName to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
         [string]$UserName,
 
         # Password to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+        [securestring]$Password,
 
         # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
         [PSCredential]$Credentials
     )
 
-    Begin
-    {
+    begin {
         $Credentials = NormaliseCredentials
         
         $p = Get-RabbitMQPermission -HostName $HostName -Credentials $Credentials -VirtualHost $VirtualHost -User $User
@@ -82,25 +80,22 @@ function Add-RabbitMQPermission
         $cnt = 0
     }
 
-    Process
-    {
-        if ($pscmdlet.ShouldProcess("server: $HostName", "Create permission to virtual host $VirtualHost for user $User : $Configure, $Read $Write"))
-        {
-            $url = "$(Format-BaseUrl -HostName $HostName -port $port -useHttps:$useHttps)api/permissions/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($User))"
+    process {
+        if ($PSCmdlet.ShouldProcess("server: $HostName", "Create permission to virtual host $VirtualHost for user $User : $Configure, $Read $Write")) {
+            $url = "$(Format-BaseUrl -HostName $HostName -port $Port -UseHttps:$UseHttps)permissions/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($User))"
             $body = @{
                 'configure' = $Configure
-                'read' = $Read
-                'write' = $Write                
+                'read'      = $Read
+                'write'     = $Write                
             } | ConvertTo-Json
-            $result = Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Put -ContentType "application/json" -Body $body -SkipCertificateCheck:$skipCertificateCheck
+            $result = Invoke-RestMethod -Uri $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Put -ContentType "application/json" -Body $body -SkipCertificateCheck:$SkipCertificateCheck
 
             Write-Verbose "Created permission to $VirtualHost for $User : $Configure, $Read, $Write"
             $cnt++
         }
     }
     
-    End
-    {
+    end {
         if ($cnt -gt 1) { Write-Verbose "Created $cnt permissions." }
     }
 }

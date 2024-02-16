@@ -51,70 +51,64 @@
 .LINK
     https://www.rabbitmq.com/management.html - information about RabbitMQ management plugin.
 #>
-function Remove-RabbitMQConnection
-{
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact="High")]
+function Remove-RabbitMQConnection {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = "High")]
     Param
     (
         # Name of RabbitMQ connection.
-        [parameter(Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [Alias("ConnectionName")]
         [string[]]$Name = "",
 
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
-        [Alias("HostName", "hn", "cn")]
-        [string]$HostName = $defaultComputerName,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("ComputerName")]
+        [string]$HostName = $DefaultHostName,
 
         # UserName to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
         [string]$UserName,
 
         # Password to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+        [securestring]$Password,
 
         # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+        [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
+        [PSCredential]$Credentials = $DefaultCredentials,
 
         # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+        [switch]$UseHttps,
 
         # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+        [int]$Port = 15672,
 
         # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
+        [switch]$SkipCertificateCheck
     )
 
-    Begin
-    {
+    begin {
         $Credentials = NormaliseCredentials
         $cnt = 0
     }
-    Process
-    {
-        if (-not $pscmdlet.ShouldProcess("server: $HostName", "Close connection(s): $(NamesToString $Name '(all)')")) {
-            foreach ($qn in $Name)
-            { 
+    process {
+        if (-not $PSCmdlet.ShouldProcess("server: $HostName", "Close connection(s): $(NamesToString -Name $Name -AltText '(all)')")) {
+            foreach ($qn in $Name) { 
                 Write-Output "Closing connection $qn to server=$HostName"
                 $cnt++
             }
             return
         }
 
-        foreach($n in $Name)
-        {
-            $url = "$(Format-BaseUrl -HostName $HostName -port $port -useHttps:$useHttps)api/connections/$([System.Web.HttpUtility]::UrlEncode($n))"
-            Invoke-RestMethod $url -Credential $Credentials -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Delete -SkipCertificateCheck:$skipCertificateCheck
+        foreach ($n in $Name) {
+            $url = "$(Format-BaseUrl -HostName $HostName -port $Port -UseHttps:$UseHttps)connections/$([System.Web.HttpUtility]::UrlEncode($n))"
+            Invoke-RestMethod -Uri $url -Credential $Credentials -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Delete -SkipCertificateCheck:$SkipCertificateCheck
 
             Write-Verbose "Closed connection $n to server $HostName"
             $cnt++
         }
     }
-    End
-    {
+    end {
         if ($cnt -gt 1) { Write-Verbose "Closed $cnt connection(s)." }
     }
 }

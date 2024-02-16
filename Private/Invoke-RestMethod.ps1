@@ -1,85 +1,91 @@
-﻿function Invoke-RestMethod {
+﻿<#
+    .NOTES
+    Invoke-RestMethod parameter have changed somewhat in powershell core. 
+    See https://get-powershellblog.blogspot.co.uk/2017/11/powershell-core-web-cmdlets-in-depth.html#L08
+#>
+
+function Invoke-RestMethod {
     [CmdletBinding(HelpUri = 'http://go.microsoft.com/fwlink/?LinkID=217034')]
     param(
         [Microsoft.PowerShell.Commands.WebRequestMethod]
-        ${Method},
+        $Method,
 
-        [Parameter(Mandatory = $true, Position = 0)]
+        [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [uri]
-        ${Uri},
+        $Uri,
 
         [Microsoft.PowerShell.Commands.WebRequestSession]
-        ${WebSession},
+        $WebSession,
 
         [Alias('SV')]
         [string]
-        ${SessionVariable},
+        $SessionVariable,
 
         [pscredential]
-        ${Credential},
+        $Credential,
 
         [switch]
-        ${UseDefaultCredentials},
+        $UseDefaultCredentials,
 
         [ValidateNotNullOrEmpty()]
         [string]
-        ${CertificateThumbprint},
+        $CertificateThumbprint,
 
         [ValidateNotNull()]
         [System.Security.Cryptography.X509Certificates.X509Certificate]
-        ${Certificate},
+        $Certificate,
 
         [string]
-        ${UserAgent},
+        $UserAgent,
 
         [switch]
-        ${DisableKeepAlive},
+        $DisableKeepAlive,
 
         [int]
-        ${TimeoutSec},
+        $TimeoutSec,
 
         [System.Collections.IDictionary]
-        ${Headers},
+        $Headers,
 
         [ValidateRange(0, 2147483647)]
         [int]
-        ${MaximumRedirection},
+        $MaximumRedirection,
 
         [uri]
-        ${Proxy},
+        $Proxy,
 
         [pscredential]
-        ${ProxyCredential},
+        $ProxyCredential,
 
         [switch]
-        ${ProxyUseDefaultCredentials},
+        $ProxyUseDefaultCredentials,
 
         [Parameter(ValueFromPipeline = $true)]
         [System.Object]
-        ${Body},
+        $Body,
 
         [string]
-        ${ContentType},
+        $ContentType,
 
         [ValidateSet('chunked', 'compress', 'deflate', 'gzip', 'identity')]
         [string]
-        ${TransferEncoding},
+        $TransferEncoding,
 
         [string]
-        ${InFile},
+        $InFile,
 
         [string]
-        ${OutFile},
+        $OutFile,
 
         [switch]
-        ${PassThru},
+        $PassThru,
 
         [switch]
-        ${AllowEscapedDotsAndSlashes},
+        $AllowEscapedDotsAndSlashes,
         
         [switch]
-        ${SkipCertificateCheck})
+        $SkipCertificateCheck)
 
     begin {
         try {
@@ -90,7 +96,8 @@
             
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Microsoft.PowerShell.Utility\Invoke-RestMethod', [System.Management.Automation.CommandTypes]::Cmdlet)
 
-            # check whether need to disable UnEscapingDotsAndSlases on UriParser
+            # check whether need to disable UnEscapingDotsAndSlashes on UriParser
+            Write-Verbose "$($Uri.OriginalString)"
             $requiresDisableUnEscapingDotsAndSlashes = ($AllowEscapedDotsAndSlashes -and $Uri.OriginalString -match '%2f')
             # remove additional proxy parameter to prevent original function from failing
             if ($PSBoundParameters['AllowEscapedDotsAndSlashes']) { $null = $PSBoundParameters.Remove('AllowEscapedDotsAndSlashes') }
@@ -111,29 +118,24 @@
                     else {
                         $PSBoundParameters['Headers'] = @{ 'content-length' = 0 }
                     }
-
-                    $scriptCmd = { & $wrappedCmd @PSBoundParameters }
-                    $steppablePipeline = $scriptCmd.GetSteppablePipeline($myInvocation.CommandOrigin)
-                    $steppablePipeline.Begin($PSCmdlet)
                 }
 
                 #It seems that sometimes errors occur if you don't yield a short time.
                 Start-Sleep -Milliseconds 100
-                $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+                $scriptCmd = { & $wrappedCmd @PSBoundParameters }
             }
+            $steppablePipeline = $scriptCmd.GetSteppablePipeline($myInvocation.CommandOrigin)
+            $steppablePipeline.Begin($PSCmdlet)
         }
         catch {
             throw
-        }                
-
-        $steppablePipeline = $scriptCmd.GetSteppablePipeline($myInvocation.CommandOrigin)
-        $steppablePipeline.Begin($PSCmdlet)
+        }
     }
 
     process {
         try {
             # Disable UnEscapingDotsAndSlashes on UriParser when necessary
-            if ($requiresDisableUnEscapingDotsAndSlashes) {
+            if ($requiresDisableUnEscapingDotsAndSlashes -and -not $isPowershellCore) {
                 PreventUnEscapeDotsAndSlashesOnUri
             }
 

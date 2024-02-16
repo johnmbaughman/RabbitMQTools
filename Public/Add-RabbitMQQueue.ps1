@@ -58,57 +58,57 @@
 #>
 function Add-RabbitMQQueue
 {
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact="Low")]
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = "Low")]
     Param
     (
         # Name of RabbitMQ Queue.
-        [parameter(Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true, Position=0)]
-        [Alias("queue", "QueueName")]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [Alias("queue")]
         [string[]]$Name,
 
         # Name of the virtual host to filter channels by.
-        [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [Alias("vh", "vhost")]
-        [string]$VirtualHost = $defaultVirtualhost,
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [Alias("vhost")]
+        [string]$VirtualHost = $DefaultVirtualHost,
 
         # Determines whether the queue should be durable.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [switch]$Durable = $false,
         
         # Determines whether the queue should be deleted automatically after all consumers have finished using it.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [switch]$AutoDelete = $false,
 
         # Name/Value pairs of additional queue features
-        [parameter(ValueFromPipelineByPropertyName=$true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [hashtable]$Arguments,
 
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
-        [Alias("HostName", "hn", "cn")]
-        [string]$HostName = $defaultComputerName,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("ComputerName")]
+        [string]$HostName = $DefaultHostName,
         
         
         # UserName to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
         [string]$UserName,
 
         # Password to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+        [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+        [securestring]$Password,
 
         # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+        [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
+        [PSCredential]$Credentials = $DefaultCredentials,
 
         # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+        [switch]$UseHttps,
 
         # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+        [int]$Port = 15672,
 
         # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
+        [switch]$SkipCertificateCheck
     )
 
     Begin
@@ -119,11 +119,11 @@ function Add-RabbitMQQueue
     
     Process
     {
-        if ($pscmdlet.ShouldProcess("server: $HostName/$VirtualHost", "Add queue(s): $(NamesToString $Name '(all)'); Durable=$Durable, AutoDelete=$AutoDelete"))
+        if ($PSCmdlet.ShouldProcess("server: $HostName/$VirtualHost", "Add queue(s): $(NamesToString -Name $Name -AltText '(all)'); Durable=$Durable, AutoDelete=$AutoDelete"))
         {
             foreach($n in $Name)
             {
-                $url = "$(Format-BaseUrl -HostName $HostName -port $port -useHttps:$useHttps)queues/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($n))"
+                $url = "$(Format-BaseUrl -HostName $HostName -port $Port -UseHttps:$UseHttps)queues/$([System.Web.HttpUtility]::UrlEncode($VirtualHost))/$([System.Web.HttpUtility]::UrlEncode($n))"
                 Write-Verbose "Invoking REST API: $url"
 
                 $body = @{}
@@ -132,7 +132,7 @@ function Add-RabbitMQQueue
                 if ($Arguments -ne $null -and $Arguments.Count -gt 0) { $body.Add("arguments", $Arguments) }
 
                 $bodyJson = $body | ConvertTo-Json
-                Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Put -ContentType "application/json" -Body $bodyJson -SkipCertificateCheck:$skipCertificateCheck
+                Invoke-RestMethod -Uri $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive:$InvokeRestMethodKeepAlive -ErrorAction Continue -Method Put -ContentType "application/json" -Body $bodyJson -SkipCertificateCheck:$SkipCertificateCheck
 
                 Write-Verbose "Created Queue $n on $HostName/$VirtualHost"
                 $cnt++

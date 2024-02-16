@@ -32,7 +32,6 @@
 
    This command gets cluster nodes which name is either "primary" or starts with "secondary".
 
-
 .EXAMPLE
    @("primary", "secondary") | Get-RabbitMQNode
 
@@ -47,63 +46,58 @@
 .LINK
     https://www.rabbitmq.com/management.html - information about RabbitMQ management plugin.
 #>
-function Get-RabbitMQNode
-{
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact='None')]
-    Param
-    (
-        # Name of RabbitMQ Node.
-        [parameter(ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
-        [Alias("Node", "NodeName")]
-        [string[]]$Name = "",
+function Get-RabbitMQNode {
+   [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'None')]
+   Param
+   (
+      # Name of RabbitMQ Node.
+      [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+      [Alias("Node", "NodeName")]
+      [string[]]$Name = "",
                
-        # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
-        [parameter(ValueFromPipelineByPropertyName=$true)]
-        [Alias("HostName", "hn", "cn")]
-        [string]$HostName = $defaultComputerName,
+      # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
+      [Parameter(ValueFromPipelineByPropertyName = $true)]
+      [Alias("ComputerName")]
+      [string]$HostName = $DefaultHostName,
 
-        # UserName to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$UserName,
+      # UserName to use when logging to RabbitMq server.
+      [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+      [string]$UserName,
 
-        # Password to use when logging to RabbitMq server.
-        [Parameter(Mandatory=$true, ParameterSetName='login')]
-        [string]$Password,
+      # Password to use when logging to RabbitMq server.
+      [Parameter(Mandatory = $true, ParameterSetName = 'login')]
+      [securestring]$Password,
 
-        # Credentials to use when logging to RabbitMQ server.
-        [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials,
+      # Credentials to use when logging to RabbitMQ server.
+      [Parameter(Mandatory = $true, ParameterSetName = 'cred')]
+      [PSCredential]$Credentials = $DefaultCredentials,
 
-        # Sets whether to use HTTPS or HTTP
-        [switch]$useHttps,
+      # Sets whether to use HTTPS or HTTP
+      [switch]$UseHttps,
 
-        # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
-        [int]$port = 15672,
+      # The HTTP/API port to connect to. Default is the RabbitMQ default: 15672.
+      [int]$Port = 15672,
 
-        # Skips the certificate check, useful for localhost and self-signed certificates.
-        [switch]$skipCertificateCheck
-    )
+      # Skips the certificate check, useful for localhost and self-signed certificates.
+      [switch]$SkipCertificateCheck
+   )
 
-    Begin
-    {
-        $Credentials = NormaliseCredentials
-    }
+   begin {
+      $Credentials = NormaliseCredentials
+   }
 
-    Process
-    {
-        if ($pscmdlet.ShouldProcess("server $HostName", "Get node(s): $(NamesToString $Name '(all)')"))
-        {
-            $result = GetItemsFromRabbitMQApi -HostName $HostName $Credentials "nodes" -useHttps:$useHttps -port:$port -SkipCertificateCheck:$skipCertificateCheck
+   process {
+      if ($PSCmdlet.ShouldProcess("server $HostName", "Get node(s): $(NamesToString -Name $Name -AltText '(all)')")) {
+         $result = GetItemsFromRabbitMQApi -HostName $HostName -Credentials $Credentials -Function "nodes" -UseHttps:$UseHttps -port:$Port -SkipCertificateCheck:$SkipCertificateCheck
             
-            $result = ApplyFilter $result 'name' $Name
+         $result = ApplyFilter $result 'name' $Name
 
-            $result | Add-Member -NotePropertyName "HostName" -NotePropertyValue $HostName
+         $result | Add-Member -NotePropertyName "HostName" -NotePropertyValue $HostName
 
-            SendItemsToOutput $result "RabbitMQ.Node"
-        }
-    }
+         SendItemsToOutput -Items $result -TypeName "RabbitMQ.Node"
+      }
+   }
     
-    End
-    {
-    }
+   end {
+   }
 }
